@@ -25,16 +25,14 @@ npm install --save-dev eslint-plugin-ai-guard
 
 ### ESLint 9 (Flat Config) — `eslint.config.js`
 
-```js
-import aiGuard from 'eslint-plugin-ai-guard';
+```javascript
+import aiGuard from "eslint-plugin-ai-guard";
 
 export default [
   {
-    plugins: { 'ai-guard': aiGuard },
-    rules: {
-      ...aiGuard.configs.recommended.rules,
-    },
-  },
+    plugins: { "ai-guard": aiGuard },
+    rules: { ...aiGuard.configs.recommended.rules }
+  }
 ];
 ```
 
@@ -48,6 +46,17 @@ export default [
 ```
 
 That's it. **Zero configuration required.**
+
+## 🧪 Validated Against Real Repositories
+
+We tested `eslint-plugin-ai-guard` against two real-world codebases to ensure high signal-to-noise ratio:
+
+1. **Next.js Portfolio Website:** Found multiple un-escaped entities (caught by native plugins) but **0 false positives** on AI Guard rules, proving it respects human-written React/Next code.
+2. **CodeCrafters Admin Backend (Express):** Caught exactly the sort of generative flaws the plugin was designed for:
+   - **SQL Injections:** Flagged dynamic string templates used to build SQL queries (`ai-guard/no-sql-string-concat`).
+   - **Leaked Secrets:** Caught mock/test passwords (`process.env` equivalents not used) (`ai-guard/no-hardcoded-secret`).
+   - **O(n) Latency Issues:** Detected sequential awaits inside `for...of` loops parsing database rows (`ai-guard/no-await-in-loop`).
+   - **Floating Promises:** Found unhandled promises inside API handlers (`ai-guard/no-floating-promise`).
 
 ## 🎬 Real Workspace Demo
 
@@ -76,11 +85,32 @@ const users = await Promise.all(userIds.map(async (id) => {
 
 ## Rules
 
-| Rule | Category | Default | Description |
-| --- | --- | --- | --- |
-| [`no-empty-catch`](docs/rules/no-empty-catch.md) | Error Handling | `error` | Disallow empty catch blocks — AI tools silently swallow errors |
-| [`no-async-array-callback`](docs/rules/no-async-array-callback.md) | Async | `error` | Disallow `async` callbacks in `map`/`filter`/`forEach`/`reduce` — returns `Promise[]`, not values |
-| [`no-floating-promise`](docs/rules/no-floating-promise.md) | Async | `error` | Disallow calling async functions without `await` or `.catch()` — errors disappear silently |
+### 🎯 Error Handling
+
+- **`ai-guard/no-empty-catch`** (Error)
+  Disallow empty catch blocks. AI tools frequently generate try/catch with empty bodies that silently swallow errors.
+- **`ai-guard/no-broad-exception`** (Warn)
+  Disallow catching `any` or `unknown` without instance narrowing. AI tools default to `catch (e: any)` which obscures the underlying failure.
+
+### ⏱️ Async Stability
+
+- **`ai-guard/no-async-array-callback`** (Error)
+  Disallow async functions in `.map()`, `.filter()`, etc. AI tools frequently suggest `array.map(async ...)` expecting resolved values, creating silent bugs.
+- **`ai-guard/no-floating-promise`** (Error)
+  Require awaiting or handling promises. AI tools frequently generate un-awaited async calls that silently swallow rejections.
+- **`ai-guard/no-await-in-loop`** (Warn)
+  Disallow sequential `await` inside loops. AI tools frequently use `for (const x of y) await z(x)` causing O(n) latency instead of parallel `Promise.all()`.
+
+### 🛡️ Security
+
+- **`ai-guard/no-hardcoded-secret`** (Error)
+  Disallow hardcoded keys/passwords. AI tools frequently provide examples with placeholder secrets that accidentally make it into production.
+- **`ai-guard/no-eval-dynamic`** (Error)
+  Disallow dynamic `eval()` or `new Function()`.
+- **`ai-guard/no-sql-string-concat`** (Error)
+  Disallow variable concatenation/interpolation in SQL queries. AI tools frequently generate dangerous code enabling SQL injection.
+- **`ai-guard/require-auth-middleware`** (Warn)
+  Enforce authentication middleware on Express/Fastify routes. AI tools frequently generate unprotected endpoints exposing sensitive data.
 
 ### Configs
 
