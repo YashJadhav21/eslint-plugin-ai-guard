@@ -47,16 +47,13 @@ export default [
 
 That's it. **Zero configuration required.**
 
-## 🧪 Validated Against Real Repositories
+## 🧪 Real-World Usage Philosophy
 
-We tested `eslint-plugin-ai-guard` against two real-world codebases to ensure high signal-to-noise ratio:
+`ai-guard` is designed for production adoption in existing codebases:
 
-1. **Next.js Portfolio Website:** Found multiple un-escaped entities (caught by native plugins) but **0 false positives** on AI Guard rules, proving it respects human-written React/Next code.
-2. **CodeCrafters Admin Backend (Express):** Caught exactly the sort of generative flaws the plugin was designed for:
-   - **SQL Injections:** Flagged dynamic string templates used to build SQL queries (`ai-guard/no-sql-string-concat`).
-   - **Leaked Secrets:** Caught mock/test passwords (`process.env` equivalents not used) (`ai-guard/no-hardcoded-secret`).
-   - **O(n) Latency Issues:** Detected sequential awaits inside `for...of` loops parsing database rows (`ai-guard/no-await-in-loop`).
-   - **Floating Promises:** Found unhandled promises inside API handlers (`ai-guard/no-floating-promise`).
+1. **Recommended preset is intentionally low-noise** to avoid overwhelming teams on day one.
+2. **Strict preset enables full enforcement** for mature teams that want maximum coverage.
+3. **Security preset focuses only on security rules** with critical issues as errors.
 
 ## 🎬 Real Workspace Demo
 
@@ -83,7 +80,7 @@ const users = await Promise.all(userIds.map(async (id) => {
 
 *The terminal output above shows `ai-guard` catching multiple AI-generated anti-patterns in a single run.*
 
-## Rules
+## Rules (Recommended Preset)
 
 ### 🎯 Error Handling
 
@@ -91,14 +88,14 @@ const users = await Promise.all(userIds.map(async (id) => {
   Disallow empty catch blocks. AI tools frequently generate try/catch with empty bodies that silently swallow errors.
 - **`ai-guard/no-broad-exception`** (Warn)
   Disallow catching `any` or `unknown` without instance narrowing. AI tools default to `catch (e: any)` which obscures the underlying failure.
-- **`ai-guard/no-catch-log-rethrow`** (Warn)
+- **`ai-guard/no-catch-log-rethrow`** (Off in `recommended`, Error in `strict`)
   Disallow catch blocks that only log and rethrow the same error. AI tools often generate this noisy pattern without adding recovery or context.
-- **`ai-guard/no-catch-without-use`** (Warn)
+- **`ai-guard/no-catch-without-use`** (Off in `recommended`, Error in `strict`)
   Disallow unused catch parameters. AI tools frequently add `catch (e)` while ignoring the error object entirely.
 
 ### ⏱️ Async Stability
 
-- **`ai-guard/no-async-array-callback`** (Error)
+- **`ai-guard/no-async-array-callback`** (Warn)
   Disallow async functions in `.map()`, `.filter()`, etc. AI tools frequently suggest `array.map(async ...)` expecting resolved values, creating silent bugs.
 - **`ai-guard/no-floating-promise`** (Error)
   Require awaiting or handling promises. AI tools frequently generate un-awaited async calls that silently swallow rejections.
@@ -106,7 +103,7 @@ const users = await Promise.all(userIds.map(async (id) => {
   Disallow sequential `await` inside loops. AI tools frequently use `for (const x of y) await z(x)` causing O(n) latency instead of parallel `Promise.all()`.
 - **`ai-guard/no-async-without-await`** (Warn)
   Disallow async functions that do not use `await`. AI tools frequently add `async` by default, creating misleading function signatures.
-- **`ai-guard/no-redundant-await`** (Warn)
+- **`ai-guard/no-redundant-await`** (Off in `recommended`, Error in `strict`)
   Disallow redundant `return await` outside try/catch/finally. AI tools often emit this pattern even when returning the Promise directly is equivalent.
 
 ### 🛡️ Security
@@ -115,7 +112,7 @@ const users = await Promise.all(userIds.map(async (id) => {
   Disallow hardcoded keys/passwords. AI tools frequently provide examples with placeholder secrets that accidentally make it into production.
 - **`ai-guard/no-eval-dynamic`** (Error)
   Disallow dynamic `eval()` or `new Function()`.
-- **`ai-guard/no-sql-string-concat`** (Error)
+- **`ai-guard/no-sql-string-concat`** (Warn in `recommended`, Error in `security`/`strict`)
   Disallow variable concatenation/interpolation in SQL queries. AI tools frequently generate dangerous code enabling SQL injection.
 - **`ai-guard/no-unsafe-deserialize`** (Warn)
   Disallow `JSON.parse()` on likely untrusted inputs (like `req.body`) without visible validation.
@@ -124,16 +121,44 @@ const users = await Promise.all(userIds.map(async (id) => {
 
 ### 🧹 Code Quality
 
-- **`ai-guard/no-console-in-handler`** (Warn)
+- **`ai-guard/no-console-in-handler`** (Off in `recommended`, Error in `strict`)
   Disallow `console.*` inside HTTP route handlers. AI tools often leave debug logs in handlers that leak internals and pollute production logs.
 
 ### Configs
 
 | Config | Description |
 | --- | --- |
-| `recommended` | Most impactful rules at `error` — works with zero configuration |
+| `recommended` | Adoption-first preset: high-confidence issues as `error`, context-sensitive rules as `warn`/`off` |
 | `strict` | All rules at `error` — for teams that want maximum coverage |
-| `security` | Security-focused rules only — for AppSec teams |
+| `security` | Security-only rules: critical issues at `error`, contextual checks at `warn` |
+
+### Config Examples
+
+#### Flat Config: strict
+
+```javascript
+import aiGuard from "eslint-plugin-ai-guard";
+
+export default [
+  {
+    plugins: { "ai-guard": aiGuard },
+    rules: { ...aiGuard.configs.strict.rules }
+  }
+];
+```
+
+#### Flat Config: security
+
+```javascript
+import aiGuard from "eslint-plugin-ai-guard";
+
+export default [
+  {
+    plugins: { "ai-guard": aiGuard },
+    rules: { ...aiGuard.configs.security.rules }
+  }
+];
+```
 
 ## Why This Exists
 
