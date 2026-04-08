@@ -12,7 +12,9 @@ import { noEvalDynamic } from './security/no-eval-dynamic';
 import { noSqlStringConcat } from './security/no-sql-string-concat';
 import { noUnsafeDeserialize } from './security/no-unsafe-deserialize';
 import { requireAuthMiddleware } from './security/require-auth-middleware';
+import { requireAuthzCheck } from './security/require-authz-check';
 import { noConsoleInHandler } from './quality/no-console-in-handler';
+import { noDuplicateLogicBlock } from './logic/no-duplicate-logic-block';
 
 /**
  * All rules exported by the plugin.
@@ -33,7 +35,9 @@ export const allRules = {
   'no-sql-string-concat': noSqlStringConcat,
   'no-unsafe-deserialize': noUnsafeDeserialize,
   'require-auth-middleware': requireAuthMiddleware,
+  'require-authz-check': requireAuthzCheck,
   'no-console-in-handler': noConsoleInHandler,
+  'no-duplicate-logic-block': noDuplicateLogicBlock,
 } as const;
 
 export type RuleKey = keyof typeof allRules;

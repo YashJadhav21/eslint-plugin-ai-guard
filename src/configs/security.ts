@@ -10,6 +10,7 @@ const security: TSESLint.ClassicConfig.Config = {
     'ai-guard/no-sql-string-concat': 'error',
     'ai-guard/no-unsafe-deserialize': 'warn',
     'ai-guard/require-auth-middleware': 'warn',
+    'ai-guard/require-authz-check': 'warn',
   },
 };
 

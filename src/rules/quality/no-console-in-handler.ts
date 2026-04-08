@@ -107,10 +107,13 @@ export const noConsoleInHandler = createRule({
         'Disallow console logging inside route handlers. AI tools frequently leave debug logs in request handlers, which can leak operational data and create noisy production logs.',
     },
     fixable: undefined,
+    hasSuggestions: true,
     schema: [],
     messages: {
       noConsoleInHandler:
         'Avoid console logging inside route handlers. AI tools frequently leave debug statements in handlers. Use structured application logging instead.',
+      removeConsoleCall:
+        'Remove this console statement from the route handler.',
     },
   },
   defaultOptions: [],
@@ -135,9 +138,20 @@ export const noConsoleInHandler = createRule({
 
           for (const statement of argument.body.body) {
             traverseForConsoleCalls(statement, (callNode) => {
+              const parent = callNode.parent;
+              const canSuggestRemoval = parent?.type === AST_NODE_TYPES.ExpressionStatement;
+
               context.report({
                 node: callNode,
                 messageId: 'noConsoleInHandler',
+                suggest: canSuggestRemoval
+                  ? [
+                      {
+                        messageId: 'removeConsoleCall',
+                        fix: (fixer) => fixer.remove(parent),
+                      },
+                    ]
+                  : undefined,
               });
             });
           }

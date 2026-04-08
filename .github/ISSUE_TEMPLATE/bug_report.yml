@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a bug in eslint-plugin-ai-guard
+title: "bug: "
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal code snippet and ESLint config.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: eslint-plugin-ai-guard, eslint, node
+      placeholder: "ai-guard x.y.z, eslint x.y.z, node x.y.z"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true

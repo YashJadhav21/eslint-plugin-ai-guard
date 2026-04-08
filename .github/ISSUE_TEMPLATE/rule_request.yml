@@ -1,0 +1,26 @@
+name: Rule request
+description: Propose a new ai-specific lint rule
+title: "rule: "
+labels: [enhancement, rule-request]
+body:
+  - type: textarea
+    id: pattern
+    attributes:
+      label: Pattern to detect
+      description: Describe the code pattern and why it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Bad and good examples
+      description: Include both triggering and non-triggering examples.
+    validations:
+      required: true
+  - type: textarea
+    id: false-positive
+    attributes:
+      label: False-positive risks
+      description: What valid code should never be flagged?
+    validations:
+      required: true

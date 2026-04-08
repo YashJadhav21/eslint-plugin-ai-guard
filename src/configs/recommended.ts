@@ -30,6 +30,8 @@ const recommended: TSESLint.ClassicConfig.Config = {
     'ai-guard/no-catch-without-use': 'off',
     'ai-guard/no-unsafe-deserialize': 'warn',
     'ai-guard/no-catch-log-rethrow': 'off',
+    'ai-guard/require-authz-check': 'warn',
+    'ai-guard/no-duplicate-logic-block': 'off',
   },
 };
 

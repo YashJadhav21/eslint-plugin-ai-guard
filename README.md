@@ -92,6 +92,8 @@ const users = await Promise.all(userIds.map(async (id) => {
   Disallow catch blocks that only log and rethrow the same error. AI tools often generate this noisy pattern without adding recovery or context.
 - **`ai-guard/no-catch-without-use`** (Off in `recommended`, Error in `strict`)
   Disallow unused catch parameters. AI tools frequently add `catch (e)` while ignoring the error object entirely.
+- **`ai-guard/no-duplicate-logic-block`** (Off in `recommended`, Error in `strict`)
+  Disallow consecutive duplicated logic blocks. AI tools often copy-paste identical code that should be consolidated.
 
 ### ⏱️ Async Stability
 
@@ -118,6 +120,8 @@ const users = await Promise.all(userIds.map(async (id) => {
   Disallow `JSON.parse()` on likely untrusted inputs (like `req.body`) without visible validation.
 - **`ai-guard/require-auth-middleware`** (Warn)
   Enforce authentication middleware on Express/Fastify routes. AI tools frequently generate unprotected endpoints exposing sensitive data.
+- **`ai-guard/require-authz-check`** (Warn in `recommended`/`security`, Error in `strict`)
+  Require visible ownership/authorization checks when handlers access resource identifiers (like `req.params.id`).
 
 ### 🧹 Code Quality
 

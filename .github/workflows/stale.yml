@@ -1,0 +1,23 @@
+name: Mark stale issues
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          stale-issue-message: 'This issue has been automatically marked as stale due to inactivity. Comment to keep it open.'
+          close-issue-message: 'Closing this stale issue due to inactivity. Please reopen with updated context if needed.'
+          stale-pr-message: 'This PR has been automatically marked as stale due to inactivity. Comment to keep it open.'
+          close-pr-message: 'Closing this stale PR due to inactivity. Please reopen when ready.'
+          days-before-stale: 30
+          days-before-close: 14
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: 'security,false-positive,pinned'
+          exempt-pr-labels: 'pinned'

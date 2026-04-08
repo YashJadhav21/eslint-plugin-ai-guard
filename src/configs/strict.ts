@@ -23,8 +23,10 @@ const strict: TSESLint.ClassicConfig.Config = {
     'ai-guard/no-sql-string-concat': 'error',
     'ai-guard/no-unsafe-deserialize': 'error',
     'ai-guard/require-auth-middleware': 'error',
+    'ai-guard/require-authz-check': 'error',
     // Quality - all at error
     'ai-guard/no-console-in-handler': 'error',
+    'ai-guard/no-duplicate-logic-block': 'error',
   },
 };
 

@@ -97,7 +97,22 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.send('ok');
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }],
+      errors: [
+        {
+          messageId: 'noConsoleInHandler',
+          suggestions: [
+            {
+              messageId: 'removeConsoleCall',
+              output: `
+        app.get('/health', (req, res) => {
+          
+          res.send('ok');
+        });
+      `,
+            },
+          ],
+        },
+      ],
     },
     {
       code: `
@@ -106,7 +121,7 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.sendStatus(201);
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }],
+      errors: [{ messageId: 'noConsoleInHandler', suggestions: 1 }],
     },
     {
       code: `
@@ -115,7 +130,7 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.sendStatus(204);
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }],
+      errors: [{ messageId: 'noConsoleInHandler', suggestions: 1 }],
     },
     {
       code: `
@@ -124,7 +139,7 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.sendStatus(204);
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }],
+      errors: [{ messageId: 'noConsoleInHandler', suggestions: 1 }],
     },
     {
       code: `
@@ -133,7 +148,7 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.sendStatus(204);
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }],
+      errors: [{ messageId: 'noConsoleInHandler', suggestions: 1 }],
     },
     {
       code: `
@@ -142,7 +157,7 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.send('ok');
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }],
+      errors: [{ messageId: 'noConsoleInHandler', suggestions: 1 }],
     },
     {
       code: `
@@ -151,7 +166,7 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.send('ok');
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }],
+      errors: [{ messageId: 'noConsoleInHandler', suggestions: 1 }],
     },
     {
       code: `
@@ -160,7 +175,7 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.send('x');
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }],
+      errors: [{ messageId: 'noConsoleInHandler', suggestions: 1 }],
     },
     {
       code: `
@@ -170,7 +185,10 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.send('ok');
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }, { messageId: 'noConsoleInHandler' }],
+      errors: [
+        { messageId: 'noConsoleInHandler', suggestions: 1 },
+        { messageId: 'noConsoleInHandler', suggestions: 1 },
+      ],
     },
     {
       code: `
@@ -179,7 +197,7 @@ ruleTester.run('no-console-in-handler', noConsoleInHandler, {
           res.send('ok');
         });
       `,
-      errors: [{ messageId: 'noConsoleInHandler' }],
+      errors: [{ messageId: 'noConsoleInHandler', suggestions: 1 }],
     },
   ],
 });

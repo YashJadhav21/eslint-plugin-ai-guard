@@ -124,7 +124,20 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         try { doSomething(); }
         catch (e) {}
       `,
-      errors: [{ messageId: 'emptyCatch' }],
+      errors: [
+        {
+          messageId: 'emptyCatch',
+          suggestions: [
+            {
+              messageId: 'addTodoHandler',
+              output: `
+        try { doSomething(); }
+        catch (e) { /* TODO: handle error */ }
+      `,
+            },
+          ],
+        },
+      ],
     },
     // 2. Empty catch with no parameter
     {
@@ -132,7 +145,7 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         try { doSomething(); }
         catch {}
       `,
-      errors: [{ messageId: 'emptyCatch' }],
+      errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 3. Empty catch in async function
     {
@@ -142,7 +155,7 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
           catch (e) {}
         }
       `,
-      errors: [{ messageId: 'emptyCatch' }],
+      errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 4. Empty catch in arrow function
     {
@@ -152,7 +165,7 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
           catch (e) {}
         };
       `,
-      errors: [{ messageId: 'emptyCatch' }],
+      errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 5. Nested try with inner empty catch
     {
@@ -163,7 +176,7 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         }
         catch (outer) { log(outer); }
       `,
-      errors: [{ messageId: 'emptyCatch' }],
+      errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 6. Nested try with outer empty catch
     {
@@ -174,7 +187,7 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         }
         catch (outer) {}
       `,
-      errors: [{ messageId: 'emptyCatch' }],
+      errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 7. Empty catch in class method
     {
@@ -186,7 +199,7 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
           }
         }
       `,
-      errors: [{ messageId: 'emptyCatch' }],
+      errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 8. Empty catch with finally
     {
@@ -195,7 +208,7 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         catch (e) {}
         finally { cleanup(); }
       `,
-      errors: [{ messageId: 'emptyCatch' }],
+      errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 9. Empty catch in loop
     {
@@ -205,7 +218,7 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
           catch (e) {}
         }
       `,
-      errors: [{ messageId: 'emptyCatch' }],
+      errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 10. Multiple empty catches
     {
@@ -213,7 +226,10 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         try { a(); } catch (e1) {}
         try { b(); } catch (e2) {}
       `,
-      errors: [{ messageId: 'emptyCatch' }, { messageId: 'emptyCatch' }],
+      errors: [
+        { messageId: 'emptyCatch', suggestions: 1 },
+        { messageId: 'emptyCatch', suggestions: 1 },
+      ],
     },
   ],
 });

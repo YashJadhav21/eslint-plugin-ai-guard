@@ -13,10 +13,13 @@ export const noEmptyCatch = createRule({
         'Disallow empty catch blocks. AI tools frequently generate try/catch with empty catch bodies that silently swallow errors, hiding failures in production.',
     },
     fixable: undefined,
+    hasSuggestions: true,
     schema: [],
     messages: {
       emptyCatch:
         'Catch block is empty. AI tools frequently generate empty catch blocks that silently swallow errors. Handle the error (log, rethrow, or recover), or add a comment explaining why it is intentionally empty.',
+      addTodoHandler:
+        'Add a minimal placeholder so this catch block is not silently swallowing errors.',
     },
   },
   defaultOptions: [],
@@ -36,6 +39,12 @@ export const noEmptyCatch = createRule({
           context.report({
             node,
             messageId: 'emptyCatch',
+            suggest: [
+              {
+                messageId: 'addTodoHandler',
+                fix: (fixer) => fixer.replaceText(node.body, '{ /* TODO: handle error */ }'),
+              },
+            ],
           });
         }
       },

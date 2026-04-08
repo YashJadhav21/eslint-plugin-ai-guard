@@ -1,0 +1,32 @@
+name: False positive report
+description: Report a rule firing on valid code
+title: "false-positive: "
+labels: [false-positive]
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID
+      placeholder: ai-guard/rule-name
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Code sample
+      description: Include minimal code that triggers the rule.
+    validations:
+      required: true
+  - type: textarea
+    id: why-valid
+    attributes:
+      label: Why this is valid code
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: "ai-guard x.y.z, eslint x.y.z, node x.y.z"
+    validations:
+      required: true
