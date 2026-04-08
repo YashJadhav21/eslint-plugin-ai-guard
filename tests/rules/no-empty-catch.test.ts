@@ -1,0 +1,219 @@
+import { RuleTester } from '@typescript-eslint/rule-tester';
+import { noEmptyCatch } from '../../src/rules/error-handling/no-empty-catch';
+import { describe, it, afterAll } from 'vitest';
+
+RuleTester.afterAll = afterAll;
+RuleTester.describe = describe;
+RuleTester.it = it;
+
+const ruleTester = new RuleTester({
+  languageOptions: {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+  },
+});
+
+ruleTester.run('no-empty-catch', noEmptyCatch, {
+  valid: [
+    // 1. Catch with error logging
+    {
+      code: `
+        try { doSomething(); }
+        catch (e) { console.error(e); }
+      `,
+    },
+    // 2. Catch with rethrow
+    {
+      code: `
+        try { doSomething(); }
+        catch (e) { throw e; }
+      `,
+    },
+    // 3. Catch with error handling logic
+    {
+      code: `
+        try { doSomething(); }
+        catch (e) { handleError(e); }
+      `,
+    },
+    // 4. Catch with assignment
+    {
+      code: `
+        try { doSomething(); }
+        catch (e) { lastError = e; }
+      `,
+    },
+    // 5. Catch with return statement
+    {
+      code: `
+        function foo() {
+          try { return doSomething(); }
+          catch (e) { return null; }
+        }
+      `,
+    },
+    // 6. Catch with intentional comment (developer documents why empty)
+    {
+      code: `
+        try { doSomething(); }
+        catch (e) { /* intentionally empty — this error is expected */ }
+      `,
+    },
+    // 7. Catch inside async function
+    {
+      code: `
+        async function foo() {
+          try { await doSomething(); }
+          catch (e) { console.log('Failed:', e.message); }
+        }
+      `,
+    },
+    // 8. Catch with conditional logic
+    {
+      code: `
+        try { doSomething(); }
+        catch (e) {
+          if (e instanceof TypeError) throw e;
+        }
+      `,
+    },
+    // 9. Catch in arrow function
+    {
+      code: `
+        const foo = () => {
+          try { doSomething(); }
+          catch (e) { reportError(e); }
+        };
+      `,
+    },
+    // 10. Catch in class method
+    {
+      code: `
+        class Service {
+          async run() {
+            try { await this.execute(); }
+            catch (e) { this.logger.error(e); }
+          }
+        }
+      `,
+    },
+    // 11. Nested try-catch with handling
+    {
+      code: `
+        try {
+          try { a(); }
+          catch (inner) { logInner(inner); }
+        }
+        catch (outer) { logOuter(outer); }
+      `,
+    },
+    // 12. Catch with line comment explaining intentional empty catch
+    {
+      code: `
+        try { optionalCleanup(); }
+        catch (e) {
+          // We don't care if cleanup fails
+        }
+      `,
+    },
+  ],
+  invalid: [
+    // 1. Basic empty catch
+    {
+      code: `
+        try { doSomething(); }
+        catch (e) {}
+      `,
+      errors: [{ messageId: 'emptyCatch' }],
+    },
+    // 2. Empty catch with no parameter
+    {
+      code: `
+        try { doSomething(); }
+        catch {}
+      `,
+      errors: [{ messageId: 'emptyCatch' }],
+    },
+    // 3. Empty catch in async function
+    {
+      code: `
+        async function foo() {
+          try { await bar(); }
+          catch (e) {}
+        }
+      `,
+      errors: [{ messageId: 'emptyCatch' }],
+    },
+    // 4. Empty catch in arrow function
+    {
+      code: `
+        const foo = () => {
+          try { bar(); }
+          catch (e) {}
+        };
+      `,
+      errors: [{ messageId: 'emptyCatch' }],
+    },
+    // 5. Nested try with inner empty catch
+    {
+      code: `
+        try {
+          try { a(); }
+          catch (inner) {}
+        }
+        catch (outer) { log(outer); }
+      `,
+      errors: [{ messageId: 'emptyCatch' }],
+    },
+    // 6. Nested try with outer empty catch
+    {
+      code: `
+        try {
+          try { a(); }
+          catch (inner) { log(inner); }
+        }
+        catch (outer) {}
+      `,
+      errors: [{ messageId: 'emptyCatch' }],
+    },
+    // 7. Empty catch in class method
+    {
+      code: `
+        class Service {
+          run() {
+            try { this.execute(); }
+            catch (e) {}
+          }
+        }
+      `,
+      errors: [{ messageId: 'emptyCatch' }],
+    },
+    // 8. Empty catch with finally
+    {
+      code: `
+        try { doSomething(); }
+        catch (e) {}
+        finally { cleanup(); }
+      `,
+      errors: [{ messageId: 'emptyCatch' }],
+    },
+    // 9. Empty catch in loop
+    {
+      code: `
+        for (const item of items) {
+          try { process(item); }
+          catch (e) {}
+        }
+      `,
+      errors: [{ messageId: 'emptyCatch' }],
+    },
+    // 10. Multiple empty catches
+    {
+      code: `
+        try { a(); } catch (e1) {}
+        try { b(); } catch (e2) {}
+      `,
+      errors: [{ messageId: 'emptyCatch' }, { messageId: 'emptyCatch' }],
+    },
+  ],
+});

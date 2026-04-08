@@ -1,0 +1,65 @@
+{
+  "name": "eslint-plugin-ai-guard",
+  "version": "1.0.0",
+  "description": "ESLint plugin to catch AI-specific code patterns: missing error handling, async misuse, auth gaps, and hallucinations",
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "ai",
+    "llm",
+    "copilot",
+    "cursor",
+    "claude",
+    "code-quality",
+    "security"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ --ext .ts",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "eslint": ">=8.0.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/utils": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@typescript-eslint/rule-tester": "^8.0.0",
+    "eslint": "^9.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@typescript-eslint/utils": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YashJadhav21/eslint-plugin-ai-guard"
+  },
+  "bugs": {
+    "url": "https://github.com/YashJadhav21/eslint-plugin-ai-guard/issues"
+  },
+  "homepage": "https://github.com/YashJadhav21/eslint-plugin-ai-guard#readme",
+  "author": "YashJadhav21",
+  "license": "MIT"
+}
