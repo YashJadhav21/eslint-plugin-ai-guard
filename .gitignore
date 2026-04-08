@@ -26,3 +26,5 @@ build/
 # Reference files (per user request)
 ai-guard-reference.*
 test-sample.tsx
+*.tgz
+.vscode/

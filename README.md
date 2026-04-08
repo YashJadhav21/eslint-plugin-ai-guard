@@ -91,6 +91,10 @@ const users = await Promise.all(userIds.map(async (id) => {
   Disallow empty catch blocks. AI tools frequently generate try/catch with empty bodies that silently swallow errors.
 - **`ai-guard/no-broad-exception`** (Warn)
   Disallow catching `any` or `unknown` without instance narrowing. AI tools default to `catch (e: any)` which obscures the underlying failure.
+- **`ai-guard/no-catch-log-rethrow`** (Warn)
+  Disallow catch blocks that only log and rethrow the same error. AI tools often generate this noisy pattern without adding recovery or context.
+- **`ai-guard/no-catch-without-use`** (Warn)
+  Disallow unused catch parameters. AI tools frequently add `catch (e)` while ignoring the error object entirely.
 
 ### ⏱️ Async Stability
 
@@ -100,6 +104,10 @@ const users = await Promise.all(userIds.map(async (id) => {
   Require awaiting or handling promises. AI tools frequently generate un-awaited async calls that silently swallow rejections.
 - **`ai-guard/no-await-in-loop`** (Warn)
   Disallow sequential `await` inside loops. AI tools frequently use `for (const x of y) await z(x)` causing O(n) latency instead of parallel `Promise.all()`.
+- **`ai-guard/no-async-without-await`** (Warn)
+  Disallow async functions that do not use `await`. AI tools frequently add `async` by default, creating misleading function signatures.
+- **`ai-guard/no-redundant-await`** (Warn)
+  Disallow redundant `return await` outside try/catch/finally. AI tools often emit this pattern even when returning the Promise directly is equivalent.
 
 ### 🛡️ Security
 
@@ -109,8 +117,15 @@ const users = await Promise.all(userIds.map(async (id) => {
   Disallow dynamic `eval()` or `new Function()`.
 - **`ai-guard/no-sql-string-concat`** (Error)
   Disallow variable concatenation/interpolation in SQL queries. AI tools frequently generate dangerous code enabling SQL injection.
+- **`ai-guard/no-unsafe-deserialize`** (Warn)
+  Disallow `JSON.parse()` on likely untrusted inputs (like `req.body`) without visible validation.
 - **`ai-guard/require-auth-middleware`** (Warn)
   Enforce authentication middleware on Express/Fastify routes. AI tools frequently generate unprotected endpoints exposing sensitive data.
+
+### 🧹 Code Quality
+
+- **`ai-guard/no-console-in-handler`** (Warn)
+  Disallow `console.*` inside HTTP route handlers. AI tools often leave debug logs in handlers that leak internals and pollute production logs.
 
 ### Configs
 
