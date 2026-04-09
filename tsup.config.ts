@@ -23,7 +23,7 @@ export default defineConfig([
     splitting: false,
     outDir: 'dist',
     target: 'node18',
-    external: ['eslint'],
+    external: ['eslint', '@typescript-eslint/parser'],
     tsconfig: 'tsconfig.cli.json',
     banner: {
       js: '#!/usr/bin/env node',
