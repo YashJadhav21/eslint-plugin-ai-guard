@@ -30,7 +30,7 @@ npx ai-guard run --security
 npx ai-guard init         # auto-creates ESLint config for you
 npx ai-guard doctor       # diagnoses setup issues
 npx ai-guard baseline     # track only *new* issues going forward
-
+```
 That's it. **Zero configuration required.**
 
 ## 🧪 Real-World Usage Philosophy
