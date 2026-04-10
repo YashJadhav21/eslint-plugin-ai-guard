@@ -62,7 +62,8 @@ const users = await Promise.all(userIds.map(async (id) => {
 
 ### Terminal Output
 
-![ai-guard linting demo](./assets/demo.png)
+![ai-guard linting demo](./assets/example_1.png)
+![ai-guard linting demo](./assets/example_2.png)
 
 *The terminal output above shows `ai-guard` catching multiple AI-generated anti-patterns in a single run.*
 
