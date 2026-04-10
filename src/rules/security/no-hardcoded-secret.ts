@@ -113,6 +113,7 @@ export const noHardcodedSecret = createRule({
       // Check property assignments in object literals: { secret: 'value' }
       Property(node) {
         if (node.key.type !== AST_NODE_TYPES.Identifier) return;
+        if (isRuleMetaMessagesProperty(node)) return;
 
         const propName = node.key.name;
         if (!SECRET_NAME_PATTERN.test(propName)) return;
@@ -148,6 +149,22 @@ function getStringValue(node: TSESTree.Expression): string | null {
     return node.quasis[0].value.cooked ?? null;
   }
   return null;
+}
+
+function isRuleMetaMessagesProperty(node: TSESTree.Property): boolean {
+  if (!node.parent || node.parent.type !== AST_NODE_TYPES.ObjectExpression) {
+    return false;
+  }
+
+  const parentProperty = node.parent.parent;
+  if (!parentProperty || parentProperty.type !== AST_NODE_TYPES.Property) {
+    return false;
+  }
+
+  return (
+    parentProperty.key.type === AST_NODE_TYPES.Identifier &&
+    parentProperty.key.name === 'messages'
+  );
 }
 
 function isProcessEnvAccess(node: TSESTree.Expression): boolean {

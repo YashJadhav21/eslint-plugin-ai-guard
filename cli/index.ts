@@ -1,4 +1,6 @@
 import { Command } from 'commander';
+import fs from 'fs';
+import path from 'path';
 import { registerRunCommand } from './commands/run.js';
 import { registerInitCommand } from './commands/init.js';
 import { registerDoctorCommand } from './commands/doctor.js';
@@ -11,10 +13,11 @@ import { log } from './utils/logger.js';
 
 function getVersion(): string {
   try {
-    // In CJS bundle, __dirname is available; use it to find package.json
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pkg = require('../../package.json') as { version: string };
-    return pkg.version;
+    // In the bundled CLI output, __dirname is available (CJS bundle).
+    const pkgPath = path.resolve(__dirname, '../../package.json');
+    const raw = fs.readFileSync(pkgPath, 'utf-8');
+    const pkg = JSON.parse(raw) as { version?: string };
+    return typeof pkg.version === 'string' ? pkg.version : '0.0.0';
   } catch {
     return '0.0.0';
   }

@@ -26,7 +26,7 @@ export function registerIgnoreCommand(program: Command): void {
   program
     .command('ignore')
     .description('Add default ignore patterns (.next, dist, build, coverage) to ESLint config')
-    .action(async () => {
+    .action(() => {
       const cwd = process.cwd();
 
       log.banner('AI GUARD IGNORE');

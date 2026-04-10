@@ -1,4 +1,6 @@
+import fs from 'fs';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { log } from './logger.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -43,10 +45,23 @@ export interface RunResult {
 // Plugin exports `default` (ESM). When require()'d in CJS context it arrives as
 // { default: { rules, configs, meta } }. We normalise both shapes.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizePlugin(raw: any): any {
-  if (raw && raw.default && raw.default.rules) return raw.default;
-  if (raw && raw.rules) return raw;
+type AiGuardPlugin = {
+  rules: Record<string, unknown>;
+  configs?: Record<string, unknown>;
+  meta?: Record<string, unknown>;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function normalizePlugin(raw: unknown): AiGuardPlugin {
+  if (isRecord(raw) && isRecord(raw.default) && isRecord(raw.default.rules)) {
+    return raw.default as AiGuardPlugin;
+  }
+  if (isRecord(raw) && isRecord(raw.rules)) {
+    return raw as AiGuardPlugin;
+  }
   throw new Error(
     'Could not load eslint-plugin-ai-guard. Run: npm install eslint-plugin-ai-guard',
   );
@@ -138,6 +153,27 @@ export function isSkippablePatternError(error: Error): boolean {
   return hasNoFilesSignal || hasIgnoredSignal;
 }
 
+async function loadPluginModuleFromCwd(cwd: string): Promise<unknown> {
+  const { createRequire } = await import('module');
+  const requireFromCwd = createRequire(path.join(cwd, 'package.json'));
+
+  try {
+    const resolved = requireFromCwd.resolve('eslint-plugin-ai-guard');
+    return await import(pathToFileURL(resolved).href);
+  } catch {
+    // Fall through to local dist fallback.
+  }
+
+  const localDistEntry = path.join(cwd, 'dist', 'index.js');
+  if (fs.existsSync(localDistEntry)) {
+    return await import(pathToFileURL(localDistEntry).href);
+  }
+
+  throw new Error(
+    'eslint-plugin-ai-guard is not installed. Run: npm install --save-dev eslint-plugin-ai-guard',
+  );
+}
+
 // ─── Core runner ──────────────────────────────────────────────────────────────
 
 export async function runEslint(options: RunOptions): Promise<RunResult> {
@@ -148,26 +184,7 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
   });
 
   // Load the plugin — resolve relative to the user's cwd so it finds their install
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let rawPlugin: any;
-  try {
-    // First try user's project node_modules
-    const pluginPath = path.join(
-      process.cwd(),
-      'node_modules',
-      'eslint-plugin-ai-guard',
-    );
-    rawPlugin = await import(pluginPath);
-  } catch {
-    // Fallback: use ourselves (running from inside the plugin package)
-    try {
-      rawPlugin = await import('../../src/index.js');
-    } catch {
-      throw new Error(
-        'eslint-plugin-ai-guard is not installed. Run: npm install --save-dev eslint-plugin-ai-guard',
-      );
-    }
-  }
+  const rawPlugin = await loadPluginModuleFromCwd(process.cwd());
 
   const plugin = normalizePlugin(rawPlugin);
   const rules = getRules(options.preset);
@@ -189,8 +206,7 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
   // Setting `cwd` to the target path makes relative globs work correctly.
 
   // Try to load TypeScript parser for .ts/.tsx files
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let tsParser: any = null;
+  let tsParser: unknown = null;
   try {
     // Try user's project first, then our own node_modules
     try {
@@ -207,8 +223,7 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
     // TypeScript parser not available — ts files will use default espree parser
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const configBlocks: any[] = [
+  const configBlocks: Array<Record<string, unknown>> = [
     // JS/JSX files — default espree parser
     {
       files: ['**/*.js', '**/*.jsx', '**/*.mjs', '**/*.cjs'],
@@ -253,25 +268,25 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
 
   // ESLint v9 throws if no files match a pattern — run each glob independently
   // and collect results, silently skipping 'no files found' errors
-  const allRawResults: Awaited<ReturnType<(typeof eslint)['lintFiles']>> = [];
-  for (const pattern of patterns) {
-    try {
-      const r = await eslint.lintFiles([pattern]);
-      allRawResults.push(...r);
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
+  const perPatternResults = await Promise.all(
+    patterns.map(async (pattern) => {
+      try {
+        return await eslint.lintFiles([pattern]);
+      } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err));
 
-      if (isSkippablePatternError(error)) {
-        log.debug(`Skipping pattern '${pattern}' (no lintable files)`);
-        continue;
+        if (isSkippablePatternError(error)) {
+          log.debug(`Skipping pattern '${pattern}' (no lintable files)`);
+          return [];
+        }
+
+        // Real ESLint runtime/config/parser errors should fail fast.
+        throw error;
       }
+    }),
+  );
 
-      // Real ESLint runtime/config/parser errors should fail fast.
-      throw error;
-    }
-  }
-
-  const rawResults = allRawResults;
+  const rawResults = perPatternResults.flat();
 
   const durationMs = Date.now() - startMs;
 

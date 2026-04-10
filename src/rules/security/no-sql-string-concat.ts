@@ -6,9 +6,11 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /**
- * Keywords that strongly suggest SQL query context.
+ * SQL statement signatures. We intentionally require query-like combinations
+ * to avoid false positives for normal app strings (e.g., "create", "from").
  */
-const SQL_KEYWORDS = /\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION|WHERE|FROM|JOIN|INTO|VALUES|SET|TABLE|DATABASE|GRANT|REVOKE|TRUNCATE)\b/i;
+const SQL_STATEMENT_PATTERN =
+  /\b(select\s+[\s\S]*\s+from|insert\s+into|update\s+\S+\s+set|delete\s+from|drop\s+table|create\s+(table|database)|alter\s+table|truncate\s+table|exec(?:ute)?\s+\S+|union\s+select)\b/i;
 
 export const noSqlStringConcat = createRule({
   name: 'no-sql-string-concat',
@@ -35,7 +37,7 @@ export const noSqlStringConcat = createRule({
 
         // Check if the static parts contain SQL keywords
         const staticText = node.quasis.map((q) => q.value.raw).join('');
-        if (SQL_KEYWORDS.test(staticText)) {
+        if (SQL_STATEMENT_PATTERN.test(staticText)) {
           context.report({
             node,
             messageId: 'sqlStringConcat',
@@ -46,30 +48,43 @@ export const noSqlStringConcat = createRule({
       // Binary expressions: "SELECT * FROM users WHERE id = " + userId
       BinaryExpression(node) {
         if (node.operator !== '+') return;
-
-        // Check if either side is a string literal containing SQL keywords
-        const leftStr = getStringLiteralValue(node.left);
-        const rightStr = getStringLiteralValue(node.right);
-
         if (
-          (leftStr && SQL_KEYWORDS.test(leftStr)) ||
-          (rightStr && SQL_KEYWORDS.test(rightStr))
+          node.parent?.type === AST_NODE_TYPES.BinaryExpression &&
+          node.parent.operator === '+'
         ) {
-          // Make sure the other side is NOT a string literal (needs to be dynamic)
-          const leftIsDynamic = !isStaticString(node.left);
-          const rightIsDynamic = !isStaticString(node.right);
+          return;
+        }
 
-          if (leftIsDynamic || rightIsDynamic) {
-            context.report({
-              node,
-              messageId: 'sqlStringConcat',
-            });
-          }
+        const staticText = collectStaticText(node);
+        if (!SQL_STATEMENT_PATTERN.test(staticText)) return;
+
+        if (hasDynamicParts(node)) {
+          context.report({
+            node,
+            messageId: 'sqlStringConcat',
+          });
         }
       },
     };
   },
 });
+
+function collectStaticText(node: TSESTree.Expression | TSESTree.PrivateIdentifier): string {
+  if (node.type === AST_NODE_TYPES.BinaryExpression && node.operator === '+') {
+    return `${collectStaticText(node.left)} ${collectStaticText(node.right)}`;
+  }
+
+  const literalValue = getStringLiteralValue(node);
+  return literalValue ?? '';
+}
+
+function hasDynamicParts(node: TSESTree.Expression | TSESTree.PrivateIdentifier): boolean {
+  if (node.type === AST_NODE_TYPES.BinaryExpression && node.operator === '+') {
+    return hasDynamicParts(node.left) || hasDynamicParts(node.right);
+  }
+
+  return !isStaticString(node);
+}
 
 function getStringLiteralValue(node: TSESTree.Expression | TSESTree.PrivateIdentifier): string | null {
   if (node.type === AST_NODE_TYPES.Literal && typeof node.value === 'string') {

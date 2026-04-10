@@ -70,8 +70,14 @@ async function verifyConfigLoads(
   cwd: string,
 ): Promise<null | VerifyError> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { ESLint } = await import('eslint') as { ESLint: any };
+    type EslintCtor = new (options: {
+      cwd: string;
+      overrideConfigFile: string;
+    }) => {
+      lintText: (code: string, options: { filePath: string }) => Promise<unknown>;
+    };
+
+    const { ESLint } = await import('eslint') as unknown as { ESLint: EslintCtor };
 
     const eslint = new ESLint({
       cwd,
@@ -198,6 +204,8 @@ export function registerInitCommand(program: Command): void {
         }
       } catch (e) {
         // If resolution fails entirely, skip the check; validation step will catch load errors
+        const reason = e instanceof Error ? e.message : String(e);
+        log.debug(`Skipped plugin precheck: ${reason}`);
       }
 
       // ─── Step 4: Determine config format ────────────────────────────────────
@@ -328,7 +336,10 @@ export function registerInitCommand(program: Command): void {
                try {
                  fs.renameSync(p, `${p}.bak`);
                  cleanedUp = true;
-               } catch (err) {}
+               } catch (err) {
+                 const reason = err instanceof Error ? err.message : String(err);
+                 log.warn(`Could not back up ${path.relative(cwd, p)}: ${reason}`);
+               }
             } else {
                cleanedUp = true;
                log.print(`  ${chalk.gray(`[dry-run] would rename ${path.relative(cwd, p)} to ${path.basename(p)}.bak`)}`);

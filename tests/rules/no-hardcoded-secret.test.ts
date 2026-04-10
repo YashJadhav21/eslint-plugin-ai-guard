@@ -59,6 +59,18 @@ ruleTester.run('no-hardcoded-secret', noHardcodedSecret, {
     {
       code: `const databaseUrl = 'mongodb://localhost:27017/mydb';`,
     },
+    // 11. ESLint rule meta message IDs are not secrets
+    {
+      code: `
+        const rule = {
+          meta: {
+            messages: {
+              hardcodedSecret: 'Possible hardcoded secret in variable {{name}}',
+            },
+          },
+        };
+      `,
+    },
   ],
   invalid: [
     // 1. Hardcoded API key

@@ -47,6 +47,18 @@ ruleTester.run('no-sql-string-concat', noSqlStringConcat, {
     {
       code: 'const url = `/api/users/${userId}`;',
     },
+    // 9. Normal product text containing "create" should not be flagged
+    {
+      code: 'const msg = `Run ${cmd} to create one.`;',
+    },
+    // 10. Non-SQL sentence containing "from" should not be flagged
+    {
+      code: 'const note = `Baseline from: ${preset}`;',
+    },
+    // 11. Non-SQL concat with dynamic value
+    {
+      code: `const text = 'Copy from ' + sourcePath + ' to destination';`,
+    },
   ],
   invalid: [
     // 1. Template literal SQL injection
