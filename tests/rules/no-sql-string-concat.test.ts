@@ -19,7 +19,7 @@ ruleTester.run('no-sql-string-concat', noSqlStringConcat, {
     {
       code: `db.query('SELECT * FROM users WHERE id = $1', [userId]);`,
     },
-    // 2. Static SQL string (no interpolation)
+    // 2. Static SQL text in variable (not executed at sink)
     {
       code: `const query = 'SELECT * FROM users';`,
     },
@@ -35,13 +35,13 @@ ruleTester.run('no-sql-string-concat', noSqlStringConcat, {
     {
       code: 'const msg = `Hello ${name}, welcome!`;',
     },
-    // 6. ORM-style query (no raw SQL)
+    // 6. ORM-style query (no raw SQL sink)
     {
       code: `const user = await User.findOne({ email });`,
     },
-    // 7. Static SQL in concatenation (both sides static)
+    // 7. Static SQL concatenation passed to sink
     {
-      code: `const query = 'SELECT * FROM ' + 'users';`,
+      code: `db.query('SELECT * FROM ' + 'users');`,
     },
     // 8. Template literal with no SQL keywords and expressions
     {
@@ -59,56 +59,60 @@ ruleTester.run('no-sql-string-concat', noSqlStringConcat, {
     {
       code: `const text = 'Copy from ' + sourcePath + ' to destination';`,
     },
+    // 12. Dynamic SQL-like text not sent to a sink should be ignored
+    {
+      code: 'const sql = `SELECT * FROM users WHERE id = ${userId}`;',
+    },
   ],
   invalid: [
-    // 1. Template literal SQL injection
+    // 1. Template literal SQL injection at sink
     {
-      code: 'const query = `SELECT * FROM users WHERE id = ${userId}`;',
+      code: 'db.query(`SELECT * FROM users WHERE id = ${userId}`);',
       errors: [{ messageId: 'sqlStringConcat' }],
     },
-    // 2. String concat SQL injection
+    // 2. String concat SQL injection at sink
     {
-      code: `const query = 'SELECT * FROM users WHERE id = ' + userId;`,
+      code: `db.query('SELECT * FROM users WHERE id = ' + userId);`,
       errors: [{ messageId: 'sqlStringConcat' }],
     },
-    // 3. INSERT with template literal
+    // 3. INSERT with template literal at sink
     {
-      code: 'const query = `INSERT INTO users (name) VALUES (${name})`;',
+      code: 'client.execute(`INSERT INTO users (name) VALUES (${name})`);',
       errors: [{ messageId: 'sqlStringConcat' }],
     },
-    // 4. UPDATE with template literal
+    // 4. UPDATE via variable then sink
     {
-      code: 'const query = `UPDATE users SET name = ${name} WHERE id = ${id}`;',
+      code: 'const sql = `UPDATE users SET name = ${name} WHERE id = ${id}`; db.execute(sql);',
       errors: [{ messageId: 'sqlStringConcat' }],
     },
-    // 5. DELETE with template literal
+    // 5. DELETE with template literal variable at sink
     {
-      code: 'const query = `DELETE FROM users WHERE id = ${userId}`;',
+      code: 'let query = `DELETE FROM users WHERE id = ${userId}`; db.query(query);',
       errors: [{ messageId: 'sqlStringConcat' }],
     },
-    // 6. Complex SQL with multiple interpolations
+    // 6. Complex SQL with multiple interpolations at sink
     {
-      code: 'const query = `SELECT * FROM ${table} WHERE ${column} = ${value}`;',
+      code: 'query(`SELECT * FROM ${table} WHERE ${column} = ${value}`);',
       errors: [{ messageId: 'sqlStringConcat' }],
     },
-    // 7. DROP TABLE with interpolation
+    // 7. DROP TABLE with interpolation at sink
     {
-      code: 'const query = `DROP TABLE ${tableName}`;',
+      code: 'db.run(`DROP TABLE ${tableName}`);',
       errors: [{ messageId: 'sqlStringConcat' }],
     },
     // 8. WHERE clause with string concat
     {
-      code: `const query = "SELECT * FROM orders WHERE customer = '" + customerId + "'";`,
+      code: `db.query("SELECT * FROM orders WHERE customer = '" + customerId + "'");`,
       errors: [{ messageId: 'sqlStringConcat' }],
     },
-    // 9. EXEC with dynamic input
+    // 9. EXEC with dynamic input at sink
     {
-      code: 'const query = `EXEC sp_executesql ${dynamicSql}`;',
+      code: 'db.execute(`EXEC sp_executesql ${dynamicSql}`);',
       errors: [{ messageId: 'sqlStringConcat' }],
     },
-    // 10. JOIN with template literal
+    // 10. Prisma unsafe raw sink
     {
-      code: 'const query = `SELECT u.* FROM users u JOIN orders o ON u.id = ${userId}`;',
+      code: 'prisma.$queryRawUnsafe(`SELECT * FROM ${table}`);',
       errors: [{ messageId: 'sqlStringConcat' }],
     },
   ],

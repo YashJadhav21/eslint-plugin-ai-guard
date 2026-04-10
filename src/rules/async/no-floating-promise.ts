@@ -5,64 +5,40 @@ const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/YashJadhav21/eslint-plugin-ai-guard/blob/main/docs/rules/${name}.md`
 );
 
-/**
- * Heuristic: checks if a function name or callee suggests it returns a Promise.
- * This is a naming-convention-based approach for MVP (no type-checker needed).
- */
-function looksLikeAsyncCall(node: TSESTree.CallExpression): boolean {
-  // Direct call: fetchData(), loadUser(), etc.
-  if (node.callee.type === AST_NODE_TYPES.Identifier) {
-    return hasAsyncishName(node.callee.name);
-  }
+const KNOWN_PROMISE_FACTORIES = new Set([
+  'fetch',
+]);
 
-  // Method call: this.fetchData(), service.loadUser(), etc.
-  if (
-    node.callee.type === AST_NODE_TYPES.MemberExpression &&
-    node.callee.property.type === AST_NODE_TYPES.Identifier
-  ) {
-    return hasAsyncishName(node.callee.property.name);
-  }
+const PROMISE_STATIC_METHODS = new Set([
+  'resolve',
+  'reject',
+  'all',
+  'allSettled',
+  'race',
+  'any',
+]);
 
-  return false;
+interface TypeCheckerLike {
+  getTypeAtLocation(node: unknown): unknown;
+  typeToString(type: unknown): string;
+  getPromisedTypeOfPromise?(type: unknown): unknown;
+}
+
+interface ProgramLike {
+  getTypeChecker(): TypeCheckerLike;
+}
+
+interface ParserServicesLike {
+  program?: ProgramLike;
+  esTreeNodeToTSNodeMap?: {
+    get(node: TSESTree.Node): unknown;
+  };
 }
 
 /**
- * Heuristic naming patterns for async functions.
- * Common prefixes/names used by both humans and AI for async operations.
+ * Check if a CallExpression's callee is known async via local declarations.
  */
-function hasAsyncishName(name: string): boolean {
-  const lower = name.toLowerCase();
-  return (
-    lower.startsWith('fetch') ||
-    lower.startsWith('load') ||
-    lower.startsWith('save') ||
-    lower.startsWith('delete') ||
-    lower.startsWith('create') ||
-    lower.startsWith('update') ||
-    lower.startsWith('get') ||
-    lower.startsWith('post') ||
-    lower.startsWith('put') ||
-    lower.startsWith('patch') ||
-    lower.startsWith('send') ||
-    lower.startsWith('upload') ||
-    lower.startsWith('download') ||
-    lower.startsWith('connect') ||
-    lower.startsWith('disconnect') ||
-    lower.startsWith('subscribe') ||
-    lower.startsWith('publish') ||
-    lower.startsWith('request') ||
-    lower.startsWith('query') ||
-    lower === 'axios' ||
-    lower === 'fetch'
-  );
-}
-
-/**
- * Check if a CallExpression's callee is known to be async — either via:
- * 1. The callee is defined as an async function in the current scope
- * 2. The callee name matches naming heuristics
- */
-function isCalleeAsync(
+function isLocallyAsyncCallee(
   node: TSESTree.CallExpression,
   asyncFunctionNames: Set<string>
 ): boolean {
@@ -73,8 +49,79 @@ function isCalleeAsync(
     }
   }
 
-  // Fall back to naming heuristics
-  return looksLikeAsyncCall(node);
+  if (
+    (node.callee.type === AST_NODE_TYPES.FunctionExpression ||
+      node.callee.type === AST_NODE_TYPES.ArrowFunctionExpression) &&
+    node.callee.async
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function isKnownPromiseFactoryCall(node: TSESTree.CallExpression): boolean {
+  if (node.callee.type === AST_NODE_TYPES.Identifier) {
+    return KNOWN_PROMISE_FACTORIES.has(node.callee.name);
+  }
+
+  if (
+    node.callee.type === AST_NODE_TYPES.MemberExpression &&
+    node.callee.object.type === AST_NODE_TYPES.Identifier &&
+    node.callee.object.name === 'Promise' &&
+    node.callee.property.type === AST_NODE_TYPES.Identifier
+  ) {
+    return PROMISE_STATIC_METHODS.has(node.callee.property.name);
+  }
+
+  return false;
+}
+
+function getParserServices(
+  context: Readonly<Parameters<ReturnType<typeof createRule>['create']>[0]>,
+): ParserServicesLike | null {
+  const services = context.sourceCode.parserServices as unknown;
+  if (!services || typeof services !== 'object') {
+    return null;
+  }
+
+  return services as ParserServicesLike;
+}
+
+function isPromiseLikeByTypeInfo(
+  node: TSESTree.CallExpression,
+  context: Readonly<Parameters<ReturnType<typeof createRule>['create']>[0]>,
+): boolean {
+  const services = getParserServices(context);
+  if (!services?.program || !services.esTreeNodeToTSNodeMap) {
+    return false;
+  }
+
+  try {
+    const tsNode = services.esTreeNodeToTSNodeMap.get(node);
+    if (!tsNode) {
+      return false;
+    }
+
+    const checker = services.program.getTypeChecker();
+    const type = checker.getTypeAtLocation(tsNode);
+
+    if (typeof checker.getPromisedTypeOfPromise === 'function') {
+      if (checker.getPromisedTypeOfPromise(type)) {
+        return true;
+      }
+    }
+
+    const text = checker.typeToString(type).toLowerCase();
+    return (
+      text === 'promise' ||
+      text.includes('promise<') ||
+      text.includes('promiselike<') ||
+      text.includes('thenable')
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -150,6 +197,18 @@ export const noFloatingPromise = createRule({
 
       // Check ExpressionStatements — standalone call expressions
       ExpressionStatement(node) {
+        if (
+          node.expression.type === AST_NODE_TYPES.NewExpression &&
+          node.expression.callee.type === AST_NODE_TYPES.Identifier &&
+          node.expression.callee.name === 'Promise'
+        ) {
+          context.report({
+            node,
+            messageId: 'floatingPromise',
+          });
+          return;
+        }
+
         // We only care about bare CallExpression statements
         if (node.expression.type !== AST_NODE_TYPES.CallExpression) {
           return;
@@ -162,8 +221,11 @@ export const noFloatingPromise = createRule({
 
         const callExpr = node.expression;
 
-        // Check if the callee is async
-        if (isCalleeAsync(callExpr, asyncFunctionNames)) {
+        if (
+          isLocallyAsyncCallee(callExpr, asyncFunctionNames) ||
+          isKnownPromiseFactoryCall(callExpr) ||
+          isPromiseLikeByTypeInfo(callExpr, context)
+        ) {
           context.report({
             node,
             messageId: 'floatingPromise',

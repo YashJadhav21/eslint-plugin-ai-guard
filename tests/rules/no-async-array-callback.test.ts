@@ -63,6 +63,20 @@ ruleTester.run('no-async-array-callback', noAsyncArrayCallback, {
     {
       code: `arr.filter(x => x > 0).map(x => x * 2);`,
     },
+    // 13. async map assigned, then consumed by Promise.all
+    {
+      code: `
+        const tasks = arr.map(async (item) => transform(item));
+        await Promise.all(tasks);
+      `,
+    },
+    // 14. async flatMap consumed by Promise.allSettled
+    {
+      code: `
+        const tasks = arr.flatMap(async (item) => expand(item));
+        await Promise.allSettled(tasks);
+      `,
+    },
   ],
   invalid: [
     // 1. async arrow in map
@@ -124,6 +138,14 @@ ruleTester.run('no-async-array-callback', noAsyncArrayCallback, {
     {
       code: `getItems().forEach(async (item) => { await save(item); });`,
       errors: [{ messageId: 'asyncArrayCallback', data: { method: 'forEach' } }],
+    },
+    // 13. async map assigned but never consumed by Promise combinator
+    {
+      code: `
+        const tasks = arr.map(async (item) => transform(item));
+        console.log(tasks.length);
+      `,
+      errors: [{ messageId: 'asyncArrayCallback', data: { method: 'map' } }],
     },
   ],
 });

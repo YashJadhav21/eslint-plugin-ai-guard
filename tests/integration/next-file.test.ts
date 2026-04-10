@@ -28,10 +28,20 @@ describe('integration: next-like file sample', () => {
     });
 
     const code = `
+      const db = {
+        query(sql) {
+          return sql;
+        },
+      };
+
+      async function fetchData() {
+        return 1;
+      }
+
       export default async function Page() {
         fetchData();
-        const query = ` + "`SELECT * FROM users WHERE id = ${userId}`" + `;
-        return <div>{query}</div>;
+        db.query(` + "`SELECT * FROM users WHERE id = ${userId}`" + `);
+        return <div>ok</div>;
       }
 
       async function run() {

@@ -98,6 +98,38 @@ ruleTester.run('no-await-in-loop', noAwaitInLoop, {
         }
       `,
     },
+    // 9. for-await-of stream consumption is intentionally sequential
+    {
+      code: `
+        async function consume(stream) {
+          for await (const chunk of stream) {
+            await processChunk(chunk);
+          }
+        }
+      `,
+    },
+    // 10. Intentional retry loop should be allowed
+    {
+      code: `
+        async function retry(tasks) {
+          for (const task of tasks) {
+            // intentional sequential retry with backoff
+            await retryWithBackoff(task);
+          }
+        }
+      `,
+    },
+    // 11. Rate-limit delay loop should be allowed
+    {
+      code: `
+        async function processRateLimited(items) {
+          for (const item of items) {
+            await delay(50);
+            handle(item);
+          }
+        }
+      `,
+    },
   ],
   invalid: [
     // 1. await inside for...of loop

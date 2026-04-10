@@ -12,6 +12,76 @@ const createRule = ESLintUtils.RuleCreator(
 const SQL_STATEMENT_PATTERN =
   /\b(select\s+[\s\S]*\s+from|insert\s+into|update\s+\S+\s+set|delete\s+from|drop\s+table|create\s+(table|database)|alter\s+table|truncate\s+table|exec(?:ute)?\s+\S+|union\s+select)\b/i;
 
+const SQL_SINK_METHODS = new Set([
+  'query',
+  'execute',
+  'queryraw',
+  'queryrawunsafe',
+  'executeraw',
+  'executerawunsafe',
+  'raw',
+  'run',
+  'all',
+  'get',
+  'prepare',
+]);
+
+const SQL_SINK_FUNCTIONS = new Set(['query', 'execute']);
+
+function getIdentifierName(node: TSESTree.Node): string | null {
+  if (node.type === AST_NODE_TYPES.Identifier) {
+    return node.name;
+  }
+  return null;
+}
+
+function isSqlSinkCall(node: TSESTree.CallExpression): boolean {
+  if (node.callee.type === AST_NODE_TYPES.Identifier) {
+    return SQL_SINK_FUNCTIONS.has(node.callee.name.toLowerCase());
+  }
+
+  if (
+    node.callee.type === AST_NODE_TYPES.MemberExpression &&
+    node.callee.property.type === AST_NODE_TYPES.Identifier
+  ) {
+    const methodName = node.callee.property.name.toLowerCase().replace(/^\$/, '');
+    return SQL_SINK_METHODS.has(methodName);
+  }
+
+  return false;
+}
+
+function resolveExpression(
+  node: TSESTree.Expression,
+  variableMap: Map<string, TSESTree.Expression>,
+): TSESTree.Expression {
+  const identifier = getIdentifierName(node);
+  if (identifier && variableMap.has(identifier)) {
+    return variableMap.get(identifier)!;
+  }
+  return node;
+}
+
+function isDynamicSqlExpression(node: TSESTree.Expression): boolean {
+  if (node.type === AST_NODE_TYPES.TemplateLiteral) {
+    if (node.expressions.length === 0) {
+      return false;
+    }
+    const staticText = node.quasis.map((q) => q.value.raw).join(' ');
+    return SQL_STATEMENT_PATTERN.test(staticText);
+  }
+
+  if (node.type === AST_NODE_TYPES.BinaryExpression && node.operator === '+') {
+    const staticText = collectStaticText(node);
+    if (!SQL_STATEMENT_PATTERN.test(staticText)) {
+      return false;
+    }
+    return hasDynamicParts(node);
+  }
+
+  return false;
+}
+
 export const noSqlStringConcat = createRule({
   name: 'no-sql-string-concat',
   meta: {
@@ -29,41 +99,47 @@ export const noSqlStringConcat = createRule({
   },
   defaultOptions: [],
   create(context) {
-    return {
-      // Template literals: `SELECT * FROM users WHERE id = ${userId}`
-      TemplateLiteral(node) {
-        // Must have at least one expression (interpolation)
-        if (node.expressions.length === 0) return;
+    const variableMap = new Map<string, TSESTree.Expression>();
 
-        // Check if the static parts contain SQL keywords
-        const staticText = node.quasis.map((q) => q.value.raw).join('');
-        if (SQL_STATEMENT_PATTERN.test(staticText)) {
-          context.report({
-            node,
-            messageId: 'sqlStringConcat',
-          });
+    return {
+      VariableDeclarator(node) {
+        if (
+          node.id.type === AST_NODE_TYPES.Identifier &&
+          node.init &&
+          node.init.type !== AST_NODE_TYPES.AwaitExpression
+        ) {
+          variableMap.set(node.id.name, node.init);
         }
       },
 
-      // Binary expressions: "SELECT * FROM users WHERE id = " + userId
-      BinaryExpression(node) {
-        if (node.operator !== '+') return;
+      AssignmentExpression(node) {
         if (
-          node.parent?.type === AST_NODE_TYPES.BinaryExpression &&
-          node.parent.operator === '+'
+          node.left.type === AST_NODE_TYPES.Identifier &&
+          node.right.type !== AST_NODE_TYPES.AwaitExpression
         ) {
+          variableMap.set(node.left.name, node.right);
+        }
+      },
+
+      CallExpression(node) {
+        if (!isSqlSinkCall(node)) {
           return;
         }
 
-        const staticText = collectStaticText(node);
-        if (!SQL_STATEMENT_PATTERN.test(staticText)) return;
-
-        if (hasDynamicParts(node)) {
-          context.report({
-            node,
-            messageId: 'sqlStringConcat',
-          });
+        const firstArg = node.arguments[0];
+        if (!firstArg || firstArg.type === AST_NODE_TYPES.SpreadElement) {
+          return;
         }
+
+        const resolved = resolveExpression(firstArg, variableMap);
+        if (!isDynamicSqlExpression(resolved)) {
+          return;
+        }
+
+        context.report({
+          node: firstArg,
+          messageId: 'sqlStringConcat',
+        });
       },
     };
   },

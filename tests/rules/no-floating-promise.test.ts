@@ -83,59 +83,28 @@ ruleTester.run('no-floating-promise', noFloatingPromise, {
     {
       code: `const promise = sendEmail();`,
     },
+    // 14. Synchronous event helper should not be flagged
+    {
+      code: `sendEvent('started');`,
+    },
   ],
   invalid: [
-    // 1. Bare fetchData() call as statement
+    // 1. Bare fetch() call as statement
     {
-      code: `fetchData();`,
+      code: `fetch('/api/users');`,
       errors: [{ messageId: 'floatingPromise' }],
     },
-    // 2. Bare loadUser() call
+    // 2. Bare Promise.resolve() call
     {
-      code: `loadUser();`,
+      code: `Promise.resolve(1);`,
       errors: [{ messageId: 'floatingPromise' }],
     },
-    // 3. Bare saveRecord()
+    // 3. Bare Promise.all() call
     {
-      code: `saveRecord();`,
+      code: `Promise.all(tasks);`,
       errors: [{ messageId: 'floatingPromise' }],
     },
-    // 4. Bare deleteItem()
-    {
-      code: `deleteItem();`,
-      errors: [{ messageId: 'floatingPromise' }],
-    },
-    // 5. Bare createUser()
-    {
-      code: `createUser();`,
-      errors: [{ messageId: 'floatingPromise' }],
-    },
-    // 6. Bare updateProfile()
-    {
-      code: `updateProfile();`,
-      errors: [{ messageId: 'floatingPromise' }],
-    },
-    // 7. Bare sendNotification()
-    {
-      code: `sendNotification();`,
-      errors: [{ messageId: 'floatingPromise' }],
-    },
-    // 8. Bare uploadFile()
-    {
-      code: `uploadFile();`,
-      errors: [{ messageId: 'floatingPromise' }],
-    },
-    // 9. Bare connectDatabase()
-    {
-      code: `connectDatabase();`,
-      errors: [{ messageId: 'floatingPromise' }],
-    },
-    // 10. Bare requestPermission()
-    {
-      code: `requestPermission();`,
-      errors: [{ messageId: 'floatingPromise' }],
-    },
-    // 11. Known async function declared in same file
+    // 4. Known async function declared in same file
     {
       code: `
         async function doWork() { return 1; }
@@ -143,12 +112,22 @@ ruleTester.run('no-floating-promise', noFloatingPromise, {
       `,
       errors: [{ messageId: 'floatingPromise' }],
     },
-    // 12. Async arrow function variable called bare
+    // 5. Async arrow function variable called bare
     {
       code: `
         const processItems = async () => { return 1; };
         processItems();
       `,
+      errors: [{ messageId: 'floatingPromise' }],
+    },
+    // 6. Async IIFE not awaited/handled
+    {
+      code: `(async () => 1)();`,
+      errors: [{ messageId: 'floatingPromise' }],
+    },
+    // 7. New Promise without handling
+    {
+      code: `new Promise((resolve) => resolve(1));`,
       errors: [{ messageId: 'floatingPromise' }],
     },
   ],
