@@ -4,6 +4,8 @@ import {
   isInvalidAiGuardConfig,
   repairInvalidFlatConfig,
   patchFlatConfig,
+  switchFlatPreset,
+  switchLegacyPreset,
 } from '../../cli/utils/config-manager';
 
 describe('cli config-manager flat config', () => {
@@ -54,5 +56,24 @@ export default [
     expect(patched).toContain("import aiGuard from 'eslint-plugin-ai-guard';");
     expect(patched).toContain("'ai-guard': aiGuard");
     expect(patched).toContain('...aiGuard.configs.strict.rules');
+  });
+
+  it('switches preset in flat config from recommended to security', () => {
+    const existing = generateFlatConfig('recommended');
+    const switched = switchFlatPreset(existing, 'security');
+
+    expect(switched).toContain('...aiGuard.configs.security.rules');
+    expect(switched).not.toContain('...aiGuard.configs.recommended.rules');
+  });
+
+  it('switches preset in legacy config extends line', () => {
+    const existing = `module.exports = {
+  plugins: ['ai-guard'],
+  extends: ['plugin:ai-guard/recommended'],
+};`;
+    const switched = switchLegacyPreset(existing, 'strict');
+
+    expect(switched).toContain("'plugin:ai-guard/strict'");
+    expect(switched).not.toContain("'plugin:ai-guard/recommended'");
   });
 });

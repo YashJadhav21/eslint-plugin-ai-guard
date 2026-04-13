@@ -210,6 +210,38 @@ export function patchLegacyConfig(existing: string, preset: Preset): string {
   return patched;
 }
 
+export function switchFlatPreset(existing: string, preset: Preset): string {
+  let patched = existing;
+
+  patched = patched.replace(
+    /\.\.\.aiGuard\.configs\.(recommended|strict|security)\.rules/g,
+    `...aiGuard.configs.${preset}.rules`,
+  );
+
+  patched = patched.replace(
+    /['"]ai-guard\/(recommended|strict|security)['"]/g,
+    `'ai-guard/${preset}'`,
+  );
+
+  return patched;
+}
+
+export function switchLegacyPreset(existing: string, preset: Preset): string {
+  let patched = existing;
+
+  patched = patched.replace(
+    /['"]plugin:ai-guard\/(recommended|strict|security)['"]/g,
+    `'plugin:ai-guard/${preset}'`,
+  );
+
+  patched = patched.replace(
+    /['"]ai-guard\/(recommended|strict|security)['"]/g,
+    `'ai-guard/${preset}'`,
+  );
+
+  return patched;
+}
+
 // ─── Nuke-ignore removal ──────────────────────────────────────────────────────
 
 /**

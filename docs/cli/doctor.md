@@ -14,8 +14,8 @@ ai-guard doctor
 
 | Check | What it verifies |
 |---|---|
-| ESLint installed | `eslint` is present in `node_modules` |
-| Plugin installed | `eslint-plugin-ai-guard` is present in `node_modules` |
+| ESLint installed | `eslint` is resolvable from your project |
+| Plugin installed | `eslint-plugin-ai-guard` is resolvable from your project |
 | Config present | At least one `eslint.config.*` or `.eslintrc.*` file exists |
 | Plugin wired | Your config references `ai-guard` or `eslint-plugin-ai-guard` |
 | Version compatible | ESLint version is ≥ 8.0.0 |

@@ -8,6 +8,8 @@ import {
   writeConfig,
   patchFlatConfig,
   patchLegacyConfig,
+  switchFlatPreset,
+  switchLegacyPreset,
   generateFlatConfig,
   generateLegacyConfig,
   type Preset,
@@ -69,15 +71,19 @@ export function registerPresetCommand(program: Command): void {
         log.info(`Backed up → ${chalk.gray(path.relative(cwd, backupPath))}`);
 
         const existing = readConfig(configPath);
-        const patched = isFlat(env.configType)
+        const withPlugin = isFlat(env.configType)
           ? patchFlatConfig(existing, preset)
           : patchLegacyConfig(existing, preset);
 
+        const patched = isFlat(env.configType)
+          ? switchFlatPreset(withPlugin, preset)
+          : switchLegacyPreset(withPlugin, preset);
+
         if (patched === existing) {
-          log.warn('Config already contains ai-guard. Edit manually to change preset.');
+          log.warn('No preset changes needed. Config already matches selected preset.');
         } else {
           writeConfig(configPath, patched);
-          log.success(`Patched ${chalk.white(path.relative(cwd, configPath))}`);
+          log.success(`Updated ${chalk.white(path.relative(cwd, configPath))} to ${chalk.cyan(preset)} preset`);
         }
       }
 

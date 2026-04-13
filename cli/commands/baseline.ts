@@ -17,6 +17,8 @@ interface BaselineIssue {
   column: number;
 }
 
+type BaselineMode = 'strict' | 'stable';
+
 interface BaselineEntry {
   filePath: string;
   issues: BaselineIssue[];
@@ -25,6 +27,7 @@ interface BaselineEntry {
 interface BaselineFile {
   createdAt: string;
   preset: Preset;
+  mode: BaselineMode;
   totalIssues: number;
   entries: BaselineEntry[];
 }
@@ -34,6 +37,7 @@ interface BaselineFile {
 function saveBaseline(
   result: RunResult,
   preset: Preset,
+  mode: BaselineMode,
   cwd: string,
 ): string {
   const entries: BaselineEntry[] = result.files.map((f) => ({
@@ -49,6 +53,7 @@ function saveBaseline(
   const baseline: BaselineFile = {
     createdAt: new Date().toISOString(),
     preset,
+    mode,
     totalIssues: result.totalIssues,
     entries,
   };
@@ -75,11 +80,16 @@ function issueKey(filePath: string, issue: BaselineIssue): IssueKey {
   return `${filePath}::${issue.ruleId}::${issue.line}::${issue.column}::${issue.message}`;
 }
 
-function buildBaselineSet(baseline: BaselineFile): Set<IssueKey> {
+function stableIssueKey(filePath: string, issue: BaselineIssue): IssueKey {
+  return `${filePath}::${issue.ruleId}::${issue.message}`;
+}
+
+function buildBaselineSet(baseline: BaselineFile, mode: BaselineMode): Set<IssueKey> {
+  const toKey = mode === 'stable' ? stableIssueKey : issueKey;
   const set = new Set<IssueKey>();
   for (const entry of baseline.entries) {
     for (const issue of entry.issues) {
-      set.add(issueKey(entry.filePath, issue));
+      set.add(toKey(entry.filePath, issue));
     }
   }
   return set;
@@ -88,7 +98,9 @@ function buildBaselineSet(baseline: BaselineFile): Set<IssueKey> {
 function computeNewIssues(
   result: RunResult,
   baselineSet: Set<IssueKey>,
+  mode: BaselineMode,
 ): RunResult {
+  const toKey = mode === 'stable' ? stableIssueKey : issueKey;
   const newFiles: RunResult['files'] = [];
   let totalErrors = 0;
   let totalWarnings = 0;
@@ -96,7 +108,7 @@ function computeNewIssues(
 
   for (const file of result.files) {
     const newIssues = file.issues.filter(
-      (i) => !baselineSet.has(issueKey(file.filePath, i)),
+      (i) => !baselineSet.has(toKey(file.filePath, i)),
     );
     if (newIssues.length === 0) continue;
 
@@ -139,16 +151,24 @@ export function registerBaselineCommand(program: Command): void {
     .description('Save current issues as baseline; future runs show only new issues')
     .option('--save', 'Save current state as the new baseline')
     .option('--check', 'Show only issues introduced since the last baseline')
+    .option('--mode <name>', 'Baseline match mode: strict | stable', 'stable')
     .option('--path <dir>', 'Directory to scan', '.')
     .option('--preset <name>', 'Preset: recommended | strict | security', 'recommended')
     .action(async (opts: {
       save?: boolean;
       check?: boolean;
+      mode?: string;
       path: string;
       preset: string;
     }) => {
       const cwd = process.cwd();
       const preset = (opts.preset as Preset) ?? 'recommended';
+      const mode = (opts.mode as BaselineMode) ?? 'stable';
+
+      if (mode !== 'strict' && mode !== 'stable') {
+        log.error('Invalid --mode. Use strict or stable.');
+        process.exit(1);
+      }
 
       log.banner('AI GUARD BASELINE');
       log.blank();
@@ -172,12 +192,13 @@ export function registerBaselineCommand(program: Command): void {
           process.exit(1);
         }
 
-        const baselinePath = saveBaseline(result!, preset, cwd);
+        const baselinePath = saveBaseline(result!, preset, mode, cwd);
         log.success(
           `Baseline saved → ${chalk.white(path.relative(cwd, baselinePath))}`,
         );
         log.info(`  ${result!.totalIssues} issues recorded (${result!.totalErrors} errors, ${result!.totalWarnings} warnings)`);
         log.info(`  Preset: ${chalk.cyan(preset)}`);
+        log.info(`  Mode: ${chalk.cyan(mode)}`);
         log.blank();
         log.info('Future runs of ' + chalk.cyan('ai-guard baseline --check') + ' will show only NEW issues.');
         log.info('Add ' + chalk.white(BASELINE_FILE) + ' to your git repository to share baseline with your team.');
@@ -195,6 +216,7 @@ export function registerBaselineCommand(program: Command): void {
         const baselineDate = new Date(existingBaseline.createdAt).toLocaleString();
         log.info(`Baseline from: ${chalk.gray(baselineDate)}`);
         log.info(`Baseline preset: ${chalk.cyan(existingBaseline.preset)}`);
+        log.info(`Baseline mode: ${chalk.cyan(existingBaseline.mode ?? 'strict')}`);
         log.info(`Baseline issues: ${chalk.gray(existingBaseline.totalIssues)}`);
         log.blank();
 
@@ -210,8 +232,9 @@ export function registerBaselineCommand(program: Command): void {
           process.exit(1);
         }
 
-        const baselineSet = buildBaselineSet(existingBaseline!);
-        const newResult = computeNewIssues(result!, baselineSet);
+        const compareMode = existingBaseline.mode ?? 'strict';
+        const baselineSet = buildBaselineSet(existingBaseline!, compareMode);
+        const newResult = computeNewIssues(result!, baselineSet, compareMode);
 
         if (newResult.totalIssues === 0) {
           log.success('No new issues since baseline! ✨');

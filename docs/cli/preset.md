@@ -17,7 +17,7 @@ ai-guard preset
    - `strict`
    - `security`
 2. Detects whether your project uses flat config or legacy config.
-3. Creates a config if none exists, or patches your existing config.
+3. Creates a config if none exists, or updates your existing config to the selected preset.
 4. Creates a `.bak` backup before patching existing config files.
 
 ## Preset meanings
@@ -40,3 +40,4 @@ Then choose from the interactive menu.
 
 - This command is interactive, so it is best for local development.
 - For CI and scripting, prefer non-interactive commands like `ai-guard init --preset strict`.
+- Existing ai-guard configs are updated in place (for example `recommended` to `strict`) automatically.

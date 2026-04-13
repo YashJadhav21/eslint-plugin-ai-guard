@@ -217,6 +217,8 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
     '**/*.jsx',
     '**/*.ts',
     '**/*.tsx',
+    '**/*.mts',
+    '**/*.cts',
     '**/*.mjs',
     '**/*.cjs',
   ];
@@ -263,7 +265,7 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
 
   if (tsParser) {
     configBlocks.splice(1, 0, {
-      files: ['**/*.ts', '**/*.tsx'],
+      files: ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'],
       plugins: { 'ai-guard': plugin } as Record<string, unknown>,
       languageOptions: {
         parser: tsParser,
@@ -278,7 +280,7 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
   } else {
     // No TS parser — still lint ts files but they may fail to parse
     configBlocks.splice(1, 0, {
-      files: ['**/*.ts', '**/*.tsx'],
+      files: ['**/*.ts', '**/*.tsx', '**/*.mts', '**/*.cts'],
       plugins: { 'ai-guard': plugin } as Record<string, unknown>,
       rules: rules as Record<string, unknown>,
     });

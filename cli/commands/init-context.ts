@@ -2,7 +2,7 @@ import type { Command } from 'commander';
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
-import prompts from 'prompts';
+import { checkbox, confirm } from '@inquirer/prompts';
 import { log } from '../utils/logger.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -525,37 +525,23 @@ export function registerInitContextCommand(program: Command): void {
       if (opts.all) {
         selectedAgents = [...AGENTS];
       } else {
-        let wasCancelled = false;
-        const response = await prompts(
-          {
-            type: 'multiselect',
-            name: 'agents',
+        let selected: string[];
+        try {
+          selected = await checkbox({
             message: 'Which AI agents do you use?',
             choices: [
-              { title: 'Claude Code', value: 'claude', description: '→ writes CLAUDE.md' },
-              { title: 'Cursor', value: 'cursor', description: '→ writes .cursorrules' },
-              { title: 'GitHub Copilot', value: 'copilot', description: '→ writes .github/copilot-instructions.md' },
-              { title: 'All three (recommended)', value: 'all', description: '→ writes all files' },
+              { name: 'Claude Code -> writes CLAUDE.md', value: 'claude' },
+              { name: 'Cursor -> writes .cursorrules', value: 'cursor' },
+              { name: 'GitHub Copilot -> writes .github/copilot-instructions.md', value: 'copilot' },
+              { name: 'All three (recommended) -> writes all files', value: 'all' },
             ],
-            hint: 'Space: select | Enter: confirm',
-            instructions: true,
-            min: 1,
-            warn: 'Select at least one agent.',
-          },
-          {
-            onCancel: () => {
-              wasCancelled = true;
-              return false;
-            },
-          },
-        );
-
-        if (wasCancelled) {
+            required: true,
+          });
+        } catch {
           log.info('Selection cancelled. Nothing to do.');
           return;
         }
 
-        const selected = normalizeSelectedAgents((response as { agents?: unknown }).agents);
         if (selected.length === 0) {
           log.info('No valid agents selected. Use --all to generate all files.');
           return;
@@ -582,14 +568,12 @@ export function registerInitContextCommand(program: Command): void {
 
         if (exists && !isForce && !isDryRun) {
           // Ask to overwrite
-          const confirm = await prompts({
-            type: 'confirm',
-            name: 'overwrite',
+          const overwrite = await confirm({
             message: `${agent.filePath} already exists. Overwrite?`,
-            initial: false,
+            default: false,
           });
 
-          if (!confirm.overwrite) {
+          if (!overwrite) {
             results.push({ file: agent.filePath, status: 'skipped' });
             continue;
           }

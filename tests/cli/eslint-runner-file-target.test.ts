@@ -43,4 +43,31 @@ try {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('supports .mts files in single-file mode', async () => {
+    const dir = createTempProject();
+
+    try {
+      const filePath = path.join(dir, 'bad.mts');
+      fs.writeFileSync(
+        filePath,
+        `
+async function onlyWarning() {
+  fetch('https://example.com');
+}
+`,
+        'utf8',
+      );
+
+      const result = await runEslint({
+        preset: 'recommended',
+        targetPath: filePath,
+      });
+
+      const ruleIds = result.files.flatMap((f) => f.issues.map((i) => i.ruleId));
+      expect(ruleIds).toContain('ai-guard/no-floating-promise');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

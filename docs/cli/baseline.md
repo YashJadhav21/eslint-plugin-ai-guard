@@ -16,6 +16,7 @@ ai-guard baseline [options]
 |---|---|---|
 | `--save` | auto | Save current issues to `.ai-guard-baseline.json` |
 | `--check` | auto | Compare current scan with baseline and show only new issues |
+| `--mode <name>` | `stable` | Match mode: `stable` (file+rule+message) or `strict` (includes line/column) |
 | `--path <target>` | `.` | Directory or file to scan |
 | `--preset <name>` | `recommended` | `recommended`, `strict`, or `security` |
 
@@ -40,6 +41,9 @@ npx ai-guard baseline --save
 
 # 3. In CI, fail only on new issues
 npx ai-guard baseline --check
+
+# Optional: strict mode if you want exact location matching
+npx ai-guard baseline --save --mode strict
 ```
 
 ## Exit Codes
@@ -52,4 +56,5 @@ npx ai-guard baseline --check
 ## Notes
 
 - Baseline file path: `.ai-guard-baseline.json`
+- Default mode `stable` is less noisy during refactors where line numbers move.
 - Share this file in git if you want team-wide consistent baseline behavior.

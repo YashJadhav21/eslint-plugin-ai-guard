@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,7 +52,13 @@ const ALL_CONFIG_FILES = [...FLAT_CONFIG_FILES, ...LEGACY_CONFIG_FILES];
 export function isPackageInstalled(pkgName: string, cwd = process.cwd()): boolean {
   try {
     const pkgPath = path.join(cwd, 'node_modules', pkgName, 'package.json');
-    return fs.existsSync(pkgPath);
+    if (fs.existsSync(pkgPath)) {
+      return true;
+    }
+
+    const req = createRequire(path.join(cwd, 'package.json'));
+    req.resolve(`${pkgName}/package.json`);
+    return true;
   } catch {
     return false;
   }
@@ -65,8 +72,10 @@ export function isPackageInstalled(pkgName: string, cwd = process.cwd()): boolea
 export function getPackageVersion(pkgName: string, cwd = process.cwd()): string | null {
   try {
     const pkgPath = path.join(cwd, 'node_modules', pkgName, 'package.json');
-    if (!fs.existsSync(pkgPath)) return null;
-    const raw = fs.readFileSync(pkgPath, 'utf-8');
+    const resolvedPath = fs.existsSync(pkgPath)
+      ? pkgPath
+      : createRequire(path.join(cwd, 'package.json')).resolve(`${pkgName}/package.json`);
+    const raw = fs.readFileSync(resolvedPath, 'utf-8');
     const json = JSON.parse(raw) as { version?: string };
     return json.version ?? null;
   } catch {
