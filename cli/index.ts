@@ -7,6 +7,7 @@ import { registerDoctorCommand } from './commands/doctor.js';
 import { registerPresetCommand } from './commands/preset.js';
 import { registerIgnoreCommand } from './commands/ignore.js';
 import { registerBaselineCommand } from './commands/baseline.js';
+import { registerInitContextCommand } from './commands/init-context.js';
 import { log } from './utils/logger.js';
 
 // ─── Version resolution ───────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ program
     'Quick start:\n' +
     '  npx ai-guard run          Scan current project\n' +
     '  npx ai-guard init         Auto-configure ESLint\n' +
+    '  npx ai-guard init-context Generate AI agent rules\n' +
     '  npx ai-guard doctor       Check your setup\n' +
     '  npx ai-guard baseline     Save baseline, track new issues only',
   )
@@ -49,6 +51,7 @@ registerDoctorCommand(program);
 registerPresetCommand(program);
 registerIgnoreCommand(program);
 registerBaselineCommand(program);
+registerInitContextCommand(program);
 
 // ─── Global error handling ────────────────────────────────────────────────────
 

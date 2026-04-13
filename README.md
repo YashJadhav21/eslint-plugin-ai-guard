@@ -34,6 +34,29 @@ npx ai-guard baseline     # track only *new* issues going forward
 ```
 That's it. **Zero configuration required.**
 
+## 🤖 Set Up AI Agent Rules
+
+Generate instruction files so Claude Code, Cursor, and GitHub Copilot
+automatically avoid the 17 most common AI-generated anti-patterns:
+
+```bash
+npx ai-guard init-context
+```
+
+Follow the prompts to select your agent(s). Or generate all at once:
+
+```bash
+npx ai-guard init-context --all
+```
+
+This writes:
+- `CLAUDE.md` — read automatically by Claude Code
+- `.cursorrules` — read automatically by Cursor
+- `.github/copilot-instructions.md` — read automatically by GitHub Copilot
+
+Your AI tools will now avoid these patterns before you even run the linter.
+Use `--force` to regenerate after upgrading to a new version with new rules.
+
 ## 🧪 Real-World Usage Philosophy
 
 `ai-guard` is designed for production adoption in existing codebases:
