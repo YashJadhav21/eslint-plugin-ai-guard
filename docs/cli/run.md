@@ -14,11 +14,11 @@ ai-guard run [options]
 
 | Option | Default | Description |
 |---|---|---|
-| `--path <dir>` | `.` (current directory) | Directory or file to scan |
+| `--path <target>` | `.` (current directory) | Directory or file to scan |
 | `--strict` | off | Use the strict preset — all 17 rules at `error` |
 | `--security` | off | Use the security-only preset |
 | `--json` | off | Output results as machine-readable JSON |
-| `--max-warnings <n>` | none | Exit with code 1 if warnings ≥ n |
+| `--max-warnings <n>` | none | Exit with code 1 if warnings exceed `n` |
 | `--help` | — | Show help |
 
 ## Examples
@@ -29,6 +29,9 @@ ai-guard run
 
 # Scan a specific folder
 ai-guard run --path src/api
+
+# Scan one file directly
+ai-guard run --path src/api/users.ts
 
 # Strict mode — all rules at error
 ai-guard run --strict
@@ -42,6 +45,12 @@ ai-guard run --json --max-warnings 0
 # Combine: scan a path, strict mode, JSON output
 ai-guard run --path src --strict --json
 ```
+
+## Notes
+
+- If `--path` points to a file, only that file is scanned.
+- If `--path` does not exist, the command exits with an error.
+- If both `--strict` and `--security` are passed, `--strict` takes precedence.
 
 ## Output Format
 

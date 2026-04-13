@@ -1,11 +1,25 @@
 # Rules
 
-Current implemented rules are exported from `src/rules/index.ts`.
+`eslint-plugin-ai-guard` currently ships 17 rules across four categories:
 
-Categories:
 - Error handling
-- Async stability
+- Async correctness
 - Security
 - Code quality / logic
 
-Detailed per-rule docs can be added under `docs/rules/`.
+Use the full reference for per-rule severity, examples, and fix guidance:
+
+- [Full Rules Reference](./rules/README.md)
+
+Quick links:
+
+- [Error Handling Rules](./rules/README.md#-error-handling)
+- [Async Correctness Rules](./rules/README.md#-async-correctness)
+- [Security Rules](./rules/README.md#-security)
+- [Code Quality Rules](./rules/README.md#-code-quality)
+
+Preset summary:
+
+- `recommended`: adoption-first, low-noise defaults
+- `strict`: all rules at `error`
+- `security`: security-only profile

@@ -15,6 +15,8 @@ ai-guard init [options]
 | Option | Default | Description |
 |---|---|---|
 | `--preset <name>` | `recommended` | Preset to apply: `recommended`, `strict`, or `security` |
+| `--flat` | off | Force flat config output (`eslint.config.mjs`) |
+| `--dry-run` | off | Preview changes without writing files |
 | `--help` | — | Show help |
 
 ## Examples
@@ -28,6 +30,12 @@ ai-guard init --preset strict
 
 # Configure for security-focused teams
 ai-guard init --preset security
+
+# Preview changes only (no write)
+ai-guard init --dry-run
+
+# Force flat config output
+ai-guard init --flat
 ```
 
 ## What It Does
@@ -37,7 +45,7 @@ ai-guard init --preset security
 3. **Generates or patches config**:
    - If no config exists: generates a fresh `eslint.config.mjs` (ESLint v9) or `.eslintrc.js` (ESLint v8)
    - If a config exists: backs it up (`.bak`) and patches it to add the plugin
-4. **Verifies the result** — confirms the config file is present after the operation
+4. **Validates the result** — verifies generated config structure and checks ESLint can load it
 
 ## Example Output
 
@@ -101,13 +109,20 @@ import aiGuardPlugin from 'eslint-plugin-ai-guard';
 export default [
   {
     plugins: { 'ai-guard': aiGuardPlugin },
-    rules: aiGuardPlugin.configs.recommended.rules,
+    rules: {
+      ...aiGuardPlugin.configs.recommended.rules,
+    },
   },
   {
     ignores: ['.next/**', 'dist/**', 'build/**', 'coverage/**', 'out/**'],
   },
 ];
 ```
+
+## Important
+
+`ai-guard init` does not install dependencies automatically.
+If ESLint or the plugin is missing, it prints the exact install command and exits.
 
 ### ESLint v8 (`.eslintrc.js`)
 

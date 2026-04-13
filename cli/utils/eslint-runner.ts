@@ -159,21 +159,24 @@ async function loadPluginModuleFromCwd(cwd: string): Promise<unknown> {
 
   try {
     const resolved = requireFromCwd.resolve('eslint-plugin-ai-guard');
-    return await import(pathToFileURL(resolved).href);
+    return import(pathToFileURL(resolved).href);
   } catch {
     // Fall through to local dist fallback.
   }
 
   const localDistEntry = path.join(cwd, 'dist', 'index.js');
   if (fs.existsSync(localDistEntry)) {
-    return await import(pathToFileURL(localDistEntry).href);
+    return import(pathToFileURL(localDistEntry).href);
   }
 
   const localSrcEntry = path.join(cwd, 'src', 'index.ts');
   if (fs.existsSync(localSrcEntry)) {
     try {
-      return await import(pathToFileURL(localSrcEntry).href);
-    } catch {}
+      return import(pathToFileURL(localSrcEntry).href);
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : String(err);
+      log.debug(`Local src plugin import failed: ${reason}`);
+    }
   }
 
   throw new Error(
@@ -195,7 +198,17 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
 
   const plugin = normalizePlugin(rawPlugin);
   const rules = getRules(options.preset);
-  const targetPath = path.resolve(options.targetPath);
+  const resolvedTargetPath = path.resolve(options.targetPath);
+
+  if (!fs.existsSync(resolvedTargetPath)) {
+    throw new Error(`Path not found: ${options.targetPath}`);
+  }
+
+  const targetStat = fs.statSync(resolvedTargetPath);
+  const isSingleFileTarget = targetStat.isFile();
+  const eslintCwd = isSingleFileTarget
+    ? path.dirname(resolvedTargetPath)
+    : resolvedTargetPath;
 
   const startMs = Date.now();
 
@@ -210,7 +223,7 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
 
   // ESLint v9 programmatic API: use overrideConfigFile to disable config file
   // discovery and overrideConfig to inject our plugin config.
-  // Setting `cwd` to the target path makes relative globs work correctly.
+  // For single-file scans, set cwd to the file's directory and lint only that file.
 
   // Try to load TypeScript parser for .ts/.tsx files
   let tsParser: unknown = null;
@@ -272,13 +285,15 @@ export async function runEslint(options: RunOptions): Promise<RunResult> {
   }
 
   const eslint = new ESLint({
-    cwd: targetPath,
+    cwd: eslintCwd,
     overrideConfigFile: true as unknown as string,
     overrideConfig: configBlocks,
   });
 
-  // Use relative glob patterns since cwd is the targetPath
-  const patterns = JS_TS_FILES;
+  // Use relative glob patterns for directory scans, and a direct file pattern for file scans.
+  const patterns = isSingleFileTarget
+    ? [path.basename(resolvedTargetPath)]
+    : JS_TS_FILES;
 
   // ESLint v9 throws if no files match a pattern — run each glob independently
   // and collect results, silently skipping 'no files found' errors

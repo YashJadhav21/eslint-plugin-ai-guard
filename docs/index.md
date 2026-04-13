@@ -6,4 +6,9 @@ AST-first ESLint plugin for AI-generated code pitfalls.
 - Strict preset for full enforcement
 - Security preset for AppSec pipelines
 
-See [Getting Started](/getting-started).
+## Start Here
+
+- [Quick Start](/getting-started)
+- [Full Setup Guide](/guides/getting-started)
+- [CLI Reference](/cli/overview)
+- [Rules Reference](/rules/README)

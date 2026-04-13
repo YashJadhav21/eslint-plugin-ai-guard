@@ -13,7 +13,11 @@ export function registerRunCommand(program: Command): void {
     .option('--strict', 'Use the strict rule preset (all rules at error)')
     .option('--security', 'Use the security-only rule preset')
     .option('--json', 'Output results as JSON')
-    .option('--max-warnings <n>', 'Fail if warnings exceed this count', parseInt)
+    .option(
+      '--max-warnings <n>',
+      'Fail if warnings exceed this count',
+      (value: string) => Number.parseInt(value, 10),
+    )
     .action(async (opts: {
       path: string;
       strict?: boolean;
@@ -21,11 +25,27 @@ export function registerRunCommand(program: Command): void {
       json?: boolean;
       maxWarnings?: number;
     }) => {
+      if (
+        opts.maxWarnings !== undefined &&
+        (!Number.isInteger(opts.maxWarnings) || opts.maxWarnings < 0)
+      ) {
+        log.blank();
+        log.error('--max-warnings must be a non-negative integer.');
+        log.blank();
+        process.exit(1);
+        return;
+      }
+
       const preset: Preset = opts.strict
         ? 'strict'
         : opts.security
         ? 'security'
         : 'recommended';
+
+      if (opts.strict && opts.security && !opts.json) {
+        log.warn('Both --strict and --security were provided. Using --strict.');
+        log.blank();
+      }
 
       if (!opts.json) {
         log.banner('AI GUARD RESULTS');
@@ -79,7 +99,7 @@ export function registerRunCommand(program: Command): void {
           files: result.files,
         };
         console.log(JSON.stringify(jsonOutput, null, 2));
-        process.exit(exitCode(result, opts.maxWarnings));
+        process.exit(getRunExitCode(result, opts.maxWarnings));
         return;
       }
 
@@ -180,11 +200,11 @@ export function registerRunCommand(program: Command): void {
       log.info(`Run ${chalk.cyan('ai-guard ignore')}    to suppress dist/build noise`);
       log.blank();
 
-      process.exit(exitCode(result, opts.maxWarnings));
+      process.exit(getRunExitCode(result, opts.maxWarnings));
     });
 }
 
-function exitCode(result: RunResult, maxWarnings?: number): number {
+export function getRunExitCode(result: RunResult, maxWarnings?: number): number {
   if (result.totalErrors > 0) return 1;
   if (maxWarnings !== undefined && result.totalWarnings > maxWarnings) return 1;
   return 0;

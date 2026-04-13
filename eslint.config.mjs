@@ -1,4 +1,5 @@
 import aiGuard from 'eslint-plugin-ai-guard';
+import tsParser from '@typescript-eslint/parser';
 
 export default [
   // Ignore generated / dependency directories
@@ -15,11 +16,20 @@ export default [
 
   // ai-guard: catch AI-generated code patterns
   {
+    files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+      },
+    },
     plugins: {
-      'ai-guard': aiGuard.default,
+      'ai-guard': aiGuard,
     },
     rules: {
-      ...aiGuard.recommended.rules,
+      ...aiGuard.configs.recommended.rules,
     },
   },
 ];

@@ -26,9 +26,9 @@ ai-guard run
 | [`run`](run.md) | Scan your project | First thing, any time |
 | [`init`](init.md) | Auto-configure ESLint | Before editor integration |
 | [`doctor`](doctor.md) | Diagnose setup issues | When something isn't working |
-| `preset` | Interactive preset selector | To change rule severity levels |
-| `ignore` | Add default ignores to config | To suppress dist/build noise |
-| `baseline` | Save + diff issues over time | For gradual adoption |
+| [`preset`](preset.md) | Interactive preset selector | To change rule severity levels |
+| [`ignore`](ignore.md) | Add default ignores to config | To suppress dist/build noise |
+| [`baseline`](baseline.md) | Save + diff issues over time | For gradual adoption |
 
 ---
 
@@ -49,6 +49,9 @@ npx ai-guard run
 
 # Scan a specific path
 npx ai-guard run --path src/api
+
+# Scan a single file
+npx ai-guard run --path src/api/users.ts
 
 # Strict mode (all 17 rules at error)
 npx ai-guard run --strict
@@ -86,4 +89,7 @@ npx ai-guard baseline --check
 - [run →](run.md) — Full `run` command documentation
 - [init →](init.md) — Setting up ESLint integration
 - [doctor →](doctor.md) — Diagnosing setup issues
+- [preset →](preset.md) — Switching recommended/strict/security presets
+- [ignore →](ignore.md) — Adding default ignore patterns
+- [baseline →](baseline.md) — Tracking only newly introduced issues
 - [Getting Started Guide →](../guides/getting-started.md)

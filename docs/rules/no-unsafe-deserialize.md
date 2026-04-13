@@ -1,6 +1,6 @@
 # no-unsafe-deserialize
 
-**Category:** Security | **Severity:** `warn` (recommended, strict, security)
+**Category:** Security | **Severity:** `warn` (recommended, security), `error` (strict)
 
 ---
 

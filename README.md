@@ -28,6 +28,7 @@ npx ai-guard run          # recommended preset (lowest noise)
 npx ai-guard run --strict
 npx ai-guard run --security
 npx ai-guard init         # auto-creates ESLint config for you
+npx ai-guard init --dry-run
 npx ai-guard doctor       # diagnoses setup issues
 npx ai-guard baseline     # track only *new* issues going forward
 ```
@@ -103,7 +104,7 @@ const users = await Promise.all(userIds.map(async (id) => {
   Disallow dynamic `eval()` or `new Function()`.
 - **`ai-guard/no-sql-string-concat`** (Warn in `recommended`, Error in `security`/`strict`)
   Disallow variable concatenation/interpolation in SQL queries. AI tools frequently generate dangerous code enabling SQL injection.
-- **`ai-guard/no-unsafe-deserialize`** (Warn)
+- **`ai-guard/no-unsafe-deserialize`** (Warn in `recommended`/`security`, Error in `strict`)
   Disallow `JSON.parse()` on likely untrusted inputs (like `req.body`) without visible validation.
 - **`ai-guard/require-auth-middleware`** (Warn)
   Enforce authentication middleware on Express/Fastify routes. AI tools frequently generate unprotected endpoints exposing sensitive data.
