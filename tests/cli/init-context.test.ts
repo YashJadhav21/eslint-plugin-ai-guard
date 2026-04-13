@@ -7,6 +7,7 @@ import {
   generateCursorFile,
   generateCopilotFile,
   parseCategories,
+  normalizeSelectedAgents,
   AGENTS,
   ALL_CATEGORIES,
 } from '../../cli/commands/init-context';
@@ -32,6 +33,7 @@ describe('init-context', () => {
     it('generates CLAUDE.md with all sections', () => {
       const content = generateClaudeFile('1.2.3', ALL_CATEGORIES);
       expect(content).toContain('# AI Guard Rules — Claude Code Instructions');
+      expect(content).toContain('## Workflow Guardrails');
       expect(content).toContain('## Error Handling');
       expect(content).toContain('## Async Correctness');
       expect(content).toContain('## Security');
@@ -54,6 +56,7 @@ describe('init-context', () => {
     it('generates .cursorrules with Rule: prefix format', () => {
       const content = generateCursorFile('1.2.3', ALL_CATEGORIES);
       expect(content).toContain('# AI Guard Rules — Cursor Instructions');
+      expect(content).toContain('## Workflow Guardrails');
       expect(content).toContain('Rule: no-empty-catch');
       expect(content).toContain('Bad:');
       expect(content).toContain('Good:');
@@ -66,6 +69,7 @@ describe('init-context', () => {
     it('generates copilot-instructions.md with quick reference', () => {
       const content = generateCopilotFile('1.2.3', ALL_CATEGORIES);
       expect(content).toContain('# AI Guard — GitHub Copilot Instructions');
+      expect(content).toContain('## Required Workflow');
       expect(content).toContain('## Quick Reference');
       expect(content).toContain('Never:');
       expect(content).toContain('Always:');
@@ -92,6 +96,21 @@ describe('init-context', () => {
 
     it('returns all categories when all invalid', () => {
       expect(parseCategories('bogus,invalid')).toEqual(ALL_CATEGORIES);
+    });
+  });
+
+  describe('normalizeSelectedAgents', () => {
+    it('returns array values when input is an array', () => {
+      expect(normalizeSelectedAgents(['claude', 'cursor'])).toEqual(['claude', 'cursor']);
+    });
+
+    it('normalizes a single string into array', () => {
+      expect(normalizeSelectedAgents('copilot')).toEqual(['copilot']);
+    });
+
+    it('returns empty array for invalid values', () => {
+      expect(normalizeSelectedAgents(undefined)).toEqual([]);
+      expect(normalizeSelectedAgents(123)).toEqual([]);
     });
   });
 
