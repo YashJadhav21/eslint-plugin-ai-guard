@@ -7,6 +7,11 @@
 - Security
 - Code quality / logic
 
+Recent improvements:
+
+- Safe autofix support is available for selected high-confidence rules (see per-rule docs).
+- `no-sql-string-concat` is now context-aware for known query builders to reduce false positives.
+
 Use the full reference for per-rule severity, examples, and fix guidance:
 
 - [Full Rules Reference](./rules/README.md)

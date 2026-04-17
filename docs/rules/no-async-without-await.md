@@ -1,6 +1,6 @@
 # no-async-without-await
 
-**Category:** Async Correctness | **Severity:** `warn` (recommended, strict)
+**Category:** Async Correctness | **Severity:** `warn` (recommended), `error` (strict)
 
 ---
 
@@ -36,6 +36,20 @@ function getUserName(user: User): string {
 
 const name = getUserName(user); // ← no await needed
 ```
+
+## Safe autofix
+
+This rule supports a safe autofix for simple function bodies by inserting an explicit `await`.
+
+```typescript
+// Before
+const run = async () => doWork();
+
+// After
+const run = async () => await (doWork());
+```
+
+For complex multi-statement functions, the rule reports without autofix.
 
 ## How to fix
 

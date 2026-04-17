@@ -6,7 +6,9 @@
 
 ## What it does
 
-Flags `await` expressions that appear directly inside `for`, `while`, `do...while`, and `for...of` loop bodies.
+Flags independent `await` expressions that appear directly inside `for`, `while`, `do...while`, and `for...of` loop bodies.
+
+This rule is intent-aware. It suppresses reports for common sequential/retry/fallback patterns, including loops with retry counters, control-flow exits, fallback behavior, or explicit suppression comments.
 
 ## Why it matters
 
@@ -46,11 +48,37 @@ for (const item of items) {
   await processWithRateLimit(item); // eslint-disable-line ai-guard/no-await-in-loop
 }
 
+// Retry/fallback intent is allowed
+for (let attempt = 0; attempt < 3; attempt++) {
+  try {
+    await fetchWithTimeout(url);
+    break;
+  } catch {
+    continue;
+  }
+}
+
 // Or use Promise.allSettled for partial failure tolerance
 const settled = await Promise.allSettled(
   userIds.map((userId) => fetchUser(userId))
 );
 ```
+
+## Safe autofix
+
+For simple independent loops, the rule can autofix to a `Promise.all(...map(...))` pattern.
+
+```typescript
+// Before
+for (const item of items) {
+  await processItem(item);
+}
+
+// After
+await Promise.all(items.map(async (item) => await processItem(item)));
+```
+
+Autofix is intentionally limited to high-confidence shapes. Complex loops are reported without autofix.
 
 ## How to fix
 

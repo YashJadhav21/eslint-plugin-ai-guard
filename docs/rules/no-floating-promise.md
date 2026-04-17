@@ -50,11 +50,26 @@ router.post('/order', (req, res) => {
 });
 ```
 
+## Safe autofix
+
+This rule supports a safe autofix that marks floating promise calls as explicit fire-and-forget by prefixing with `void`.
+
+```typescript
+// Before
+sendEmail(user.email);
+
+// After
+void sendEmail(user.email);
+```
+
+This is intentionally conservative: it does not change control flow by injecting `await` automatically.
+
 ## How to fix
 
 1. Add `await` before the async call (requires the parent function to be `async`)
 2. Attach `.catch((err) => ...)` to handle the rejection explicitly
 3. Store the promise in a variable and handle it before the function returns
+4. If fire-and-forget is intentional, make it explicit with `void` (this is what autofix applies)
 
 ## Configuration
 

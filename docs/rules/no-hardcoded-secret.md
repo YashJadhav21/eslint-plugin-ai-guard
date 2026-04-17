@@ -53,6 +53,28 @@ if (!stripeKey) {
 const secret = await secretsManager.getSecretValue({ SecretId: 'prod/stripe/key' });
 ```
 
+## Safe autofix
+
+This rule supports a safe autofix for hardcoded string values that match secret-like variable/property names.
+
+```typescript
+// Before
+const apiKey = 'sk-live-abc123';
+
+// After
+const apiKey = process.env.API_KEY;
+```
+
+The fixer also handles object properties and assignments:
+
+```typescript
+// Before
+config.clientSecret = 'super-secret-value';
+
+// After
+config.clientSecret = process.env.CLIENT_SECRET;
+```
+
 ## How to fix
 
 1. Move secrets to environment variables and read them with `process.env.YOUR_SECRET`

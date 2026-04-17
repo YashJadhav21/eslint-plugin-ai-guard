@@ -6,7 +6,7 @@
 
 ## What it does
 
-Flags `catch` blocks that contain no statements. An empty catch block catches an error and immediately discards it, hiding failures from the rest of the application.
+Flags `catch` blocks that contain no statements and no explanatory comment. An empty catch block catches an error and immediately discards it, hiding failures from the rest of the application.
 
 ## Why it matters
 
@@ -24,13 +24,6 @@ async function saveUser(data: User) {
   } catch (e) {
     // ← nothing here — the error silently disappears
   }
-}
-
-// Also flagged: comments don't count as statements
-try {
-  await fetchData();
-} catch (err) {
-  // TODO: handle this later
 }
 ```
 
@@ -56,6 +49,29 @@ try {
   }
   throw err;
 }
+
+// Intentionally ignored errors can be documented explicitly
+try {
+  await maybeCleanup();
+} catch {
+  // intentionally ignored: cleanup is best-effort
+}
+```
+
+## Safe autofix
+
+This rule supports a safe autofix. For a truly empty catch block, `--fix` inserts a placeholder comment:
+
+```typescript
+// Before
+try {
+  await runTask();
+} catch (e) {}
+
+// After
+try {
+  await runTask();
+} catch (e) { /* TODO: handle error */ }
 ```
 
 ## How to fix

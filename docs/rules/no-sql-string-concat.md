@@ -6,7 +6,9 @@
 
 ## What it does
 
-Flags string concatenation or template literal interpolation where the surrounding context suggests the string is a SQL query — variable names, method names, or assignment targets that contain `sql`, `query`, `select`, `insert`, `update`, `delete`, or `where`.
+Flags string concatenation or template literal interpolation when dynamic SQL is passed to SQL execution sinks (for example `query`, `execute`, `raw`, `run`, and related raw-query methods).
+
+The rule stays strict for plain SQL execution outside query builders, and now applies context-aware suppression for known query-builder chains to reduce false positives.
 
 ## Why it matters
 
@@ -28,6 +30,9 @@ const results = await connection.query(sql);
 // Builds conditions with user-controlled data
 const whereClause = 'status = ' + req.body.status;
 const fullQuery = `SELECT * FROM products WHERE ${whereClause}`;
+
+// Also flagged: non-builder sink method names used directly
+db.$queryRawUnsafe(`SELECT * FROM ${table}`);
 ```
 
 ## ✅ Good Example
@@ -46,7 +51,29 @@ const { rows } = await pool.query(
 // ORMs handle parameterization automatically
 const user = await User.findOne({ where: { id: req.params.id } });
 const products = await Product.findAll({ where: { status: req.body.status } });
+
+// Query builder contexts are ignored by this rule to avoid false positives
+knex.raw(`SELECT * FROM users WHERE id = ${userId}`);
+prisma.$queryRawUnsafe(`SELECT * FROM ${table}`);
 ```
+
+## Builder-aware behavior
+
+To reduce false positives, the rule suppresses reports when the call is clearly in a known builder context.
+
+Whitelisted builder identities:
+
+- `knex`
+- `drizzle`
+- `prisma`
+- `kysely`
+- `sequelize`
+- `typeorm`
+- `mikro-orm`
+
+Common builder-chain hints include methods like `raw()`, `query()`, `execute()`, `from()`, and `where()`.
+
+If the same dynamic SQL is sent through a non-builder sink, it is still reported.
 
 ## How to fix
 

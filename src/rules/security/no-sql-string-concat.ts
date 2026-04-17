@@ -28,6 +28,38 @@ const SQL_SINK_METHODS = new Set([
 
 const SQL_SINK_FUNCTIONS = new Set(['query', 'execute']);
 
+const KNOWN_QUERY_BUILDERS = new Set([
+  'knex',
+  'drizzle',
+  'prisma',
+  'kysely',
+  'sequelize',
+  'typeorm',
+  'mikroorm',
+]);
+
+const QUERY_BUILDER_METHOD_HINTS = new Set([
+  'raw',
+  'query',
+  'execute',
+  'from',
+  'where',
+  'whereraw',
+  'queryraw',
+  'queryrawunsafe',
+  'executeraw',
+  'executerawunsafe',
+  'select',
+  'selectfrom',
+  'insert',
+  'update',
+  'delete',
+  'join',
+  'orderby',
+  'groupby',
+  'having',
+]);
+
 function getIdentifierName(node: TSESTree.Node): string | null {
   if (node.type === AST_NODE_TYPES.Identifier) {
     return node.name;
@@ -49,6 +81,123 @@ function isSqlSinkCall(node: TSESTree.CallExpression): boolean {
   }
 
   return false;
+}
+
+function normalizeToken(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function getMemberPropertyName(
+  property: TSESTree.Expression | TSESTree.PrivateIdentifier,
+  computed: boolean,
+): string | null {
+  if (!computed && property.type === AST_NODE_TYPES.Identifier) {
+    return property.name;
+  }
+
+  if (computed && property.type === AST_NODE_TYPES.Literal && typeof property.value === 'string') {
+    return property.value;
+  }
+
+  return null;
+}
+
+function getExpressionPathParts(node: TSESTree.Node): string[] {
+  if (node.type === AST_NODE_TYPES.Identifier) {
+    return [node.name];
+  }
+
+  if (node.type === AST_NODE_TYPES.ThisExpression) {
+    return ['this'];
+  }
+
+  if (node.type === AST_NODE_TYPES.CallExpression) {
+    return getExpressionPathParts(node.callee);
+  }
+
+  if (node.type === AST_NODE_TYPES.MemberExpression) {
+    const objectParts = getExpressionPathParts(node.object);
+    const propertyName = getMemberPropertyName(node.property, node.computed);
+    return propertyName ? [...objectParts, propertyName] : objectParts;
+  }
+
+  if (
+    node.type === AST_NODE_TYPES.NewExpression &&
+    (node.callee.type === AST_NODE_TYPES.Identifier ||
+      node.callee.type === AST_NODE_TYPES.MemberExpression)
+  ) {
+    return getExpressionPathParts(node.callee);
+  }
+
+  return [];
+}
+
+function isKnownBuilderName(name: string): boolean {
+  return KNOWN_QUERY_BUILDERS.has(normalizeToken(name));
+}
+
+function isBuilderMethodHint(name: string): boolean {
+  return QUERY_BUILDER_METHOD_HINTS.has(normalizeToken(name));
+}
+
+function isKnownBuilderBinding(name: string, builderBindings: Set<string>): boolean {
+  if (builderBindings.has(name)) {
+    return true;
+  }
+
+  return builderBindings.has(normalizeToken(name));
+}
+
+function isKnownBuilderExpression(
+  node: TSESTree.Expression,
+  builderBindings: Set<string>,
+): boolean {
+  if (node.type === AST_NODE_TYPES.Identifier) {
+    return isKnownBuilderName(node.name) || isKnownBuilderBinding(node.name, builderBindings);
+  }
+
+  if (node.type === AST_NODE_TYPES.CallExpression || node.type === AST_NODE_TYPES.NewExpression) {
+    const pathParts =
+      node.type === AST_NODE_TYPES.CallExpression
+        ? getExpressionPathParts(node.callee)
+        : getExpressionPathParts(node.callee);
+
+    return pathParts.some(
+      (part) => isKnownBuilderName(part) || isKnownBuilderBinding(part, builderBindings),
+    );
+  }
+
+  if (node.type === AST_NODE_TYPES.MemberExpression) {
+    const pathParts = getExpressionPathParts(node);
+    return pathParts.some(
+      (part) => isKnownBuilderName(part) || isKnownBuilderBinding(part, builderBindings),
+    );
+  }
+
+  return false;
+}
+
+function isKnownQueryBuilderContext(
+  node: TSESTree.CallExpression,
+  builderBindings: Set<string>,
+): boolean {
+  const pathParts = getExpressionPathParts(node.callee);
+  if (pathParts.length === 0) {
+    return false;
+  }
+
+  const hasBuilderIdentity = pathParts.some(
+    (part) => isKnownBuilderName(part) || isKnownBuilderBinding(part, builderBindings),
+  );
+
+  if (!hasBuilderIdentity) {
+    const rootPart = pathParts[0];
+    if (!rootPart || !isKnownBuilderBinding(rootPart, builderBindings)) {
+      return false;
+    }
+  }
+
+  return pathParts.some((part) => isBuilderMethodHint(part));
 }
 
 function resolveExpression(
@@ -100,29 +249,62 @@ export const noSqlStringConcat = createRule({
   defaultOptions: [],
   create(context) {
     const variableMap = new Map<string, TSESTree.Expression>();
+    const builderBindings = new Set<string>();
 
     return {
       VariableDeclarator(node) {
-        if (
-          node.id.type === AST_NODE_TYPES.Identifier &&
-          node.init &&
-          node.init.type !== AST_NODE_TYPES.AwaitExpression
-        ) {
-          variableMap.set(node.id.name, node.init);
+        if (node.id.type !== AST_NODE_TYPES.Identifier || !node.init) {
+          return;
         }
+
+        if (node.init.type === AST_NODE_TYPES.AwaitExpression) {
+          builderBindings.delete(node.id.name);
+          builderBindings.delete(normalizeToken(node.id.name));
+          return;
+        }
+
+        variableMap.set(node.id.name, node.init);
+
+        if (isKnownBuilderExpression(node.init, builderBindings)) {
+          builderBindings.add(node.id.name);
+          builderBindings.add(normalizeToken(node.id.name));
+          return;
+        }
+
+        builderBindings.delete(node.id.name);
+        builderBindings.delete(normalizeToken(node.id.name));
       },
 
       AssignmentExpression(node) {
-        if (
-          node.left.type === AST_NODE_TYPES.Identifier &&
-          node.right.type !== AST_NODE_TYPES.AwaitExpression
-        ) {
-          variableMap.set(node.left.name, node.right);
+        if (node.left.type !== AST_NODE_TYPES.Identifier) {
+          return;
         }
+
+        if (node.right.type === AST_NODE_TYPES.AwaitExpression) {
+          builderBindings.delete(node.left.name);
+          builderBindings.delete(normalizeToken(node.left.name));
+          return;
+        }
+
+        variableMap.set(node.left.name, node.right);
+
+        if (isKnownBuilderExpression(node.right, builderBindings)) {
+          builderBindings.add(node.left.name);
+          builderBindings.add(normalizeToken(node.left.name));
+          return;
+        }
+
+        builderBindings.delete(node.left.name);
+        builderBindings.delete(normalizeToken(node.left.name));
       },
 
       CallExpression(node) {
         if (!isSqlSinkCall(node)) {
+          return;
+        }
+
+        // Avoid false positives for known query-builder chains.
+        if (isKnownQueryBuilderContext(node, builderBindings)) {
           return;
         }
 

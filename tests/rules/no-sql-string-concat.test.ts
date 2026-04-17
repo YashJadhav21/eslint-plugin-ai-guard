@@ -63,6 +63,26 @@ ruleTester.run('no-sql-string-concat', noSqlStringConcat, {
     {
       code: 'const sql = `SELECT * FROM users WHERE id = ${userId}`;',
     },
+    // 13. Knex raw call should be treated as query-builder context
+    {
+      code: 'knex.raw(`SELECT * FROM users WHERE id = ${userId}`);',
+    },
+    // 14. Drizzle query chain should be treated as query-builder context
+    {
+      code: 'drizzle.query(`SELECT * FROM users WHERE id = ${userId}`);',
+    },
+    // 15. Prisma unsafe raw in prisma context should be ignored by this rule
+    {
+      code: 'prisma.$queryRawUnsafe(`SELECT * FROM ${table}`);',
+    },
+    // 16. Alias bound to a known builder should be ignored
+    {
+      code: 'const db = knex(config); db.execute(`SELECT * FROM users WHERE id = ${userId}`);',
+    },
+    // 17. Builder chain containing common methods should remain ignored
+    {
+      code: 'kysely.selectFrom("users").where("id", "=", userId).query(`SELECT * FROM users WHERE id = ${userId}`);',
+    },
   ],
   invalid: [
     // 1. Template literal SQL injection at sink
@@ -112,7 +132,7 @@ ruleTester.run('no-sql-string-concat', noSqlStringConcat, {
     },
     // 10. Prisma unsafe raw sink
     {
-      code: 'prisma.$queryRawUnsafe(`SELECT * FROM ${table}`);',
+      code: 'db.$queryRawUnsafe(`SELECT * FROM ${table}`);',
       errors: [{ messageId: 'sqlStringConcat' }],
     },
   ],

@@ -65,6 +65,18 @@ Use `--force` to regenerate after upgrading to a new version with new rules.
 2. **Strict preset enables full enforcement** for mature teams that want maximum coverage.
 3. **Security preset focuses only on security rules** with critical issues as errors.
 
+## 🛠️ Safe Autofix Support
+
+`ai-guard` now includes safe autofixers for selected high-confidence rules:
+
+- `ai-guard/no-empty-catch` → inserts `{ /* TODO: handle error */ }`
+- `ai-guard/no-await-in-loop` → rewrites simple independent loops to `await Promise.all(...)`
+- `ai-guard/no-hardcoded-secret` → replaces hardcoded literals with `process.env.*`
+- `ai-guard/no-floating-promise` → marks intentional fire-and-forget with `void`
+- `ai-guard/no-async-without-await` → inserts `await (...)` for simple function bodies
+
+These fixes are intentionally conservative and avoid complex transformations when confidence is low.
+
 ## 🎬 Real Workspace Demo
 
 See how `ai-guard` catches a common AI-generated async bug that silent failures in production:
@@ -96,7 +108,7 @@ const users = await Promise.all(userIds.map(async (id) => {
 ### 🎯 Error Handling
 
 - **`ai-guard/no-empty-catch`** (Error)
-  Disallow empty catch blocks. AI tools frequently generate try/catch with empty bodies that silently swallow errors.
+  Disallow empty catch blocks. Includes safe autofix that inserts an explicit placeholder handler comment.
 - **`ai-guard/no-broad-exception`** (Warn)
   Disallow catching `any` or `unknown` without instance narrowing. AI tools default to `catch (e: any)` which obscures the underlying failure.
 - **`ai-guard/no-catch-log-rethrow`** (Off in `recommended`, Error in `strict`)
@@ -111,22 +123,22 @@ const users = await Promise.all(userIds.map(async (id) => {
 - **`ai-guard/no-async-array-callback`** (Warn)
   Disallow async functions in `.map()`, `.filter()`, etc. AI tools frequently suggest `array.map(async ...)` expecting resolved values, creating silent bugs.
 - **`ai-guard/no-floating-promise`** (Error)
-  Require awaiting or handling promises. AI tools frequently generate un-awaited async calls that silently swallow rejections.
+  Require awaiting or handling promises. Includes safe autofix that marks floating calls with `void`.
 - **`ai-guard/no-await-in-loop`** (Warn)
-  Disallow sequential `await` inside loops. AI tools frequently use `for (const x of y) await z(x)` causing O(n) latency instead of parallel `Promise.all()`.
+  Disallow independent sequential `await` inside loops. Intent-aware suppression protects retry/fallback loops, and safe autofix is available for simple independent cases.
 - **`ai-guard/no-async-without-await`** (Warn)
-  Disallow async functions that do not use `await`. AI tools frequently add `async` by default, creating misleading function signatures.
+  Disallow async functions that do not use `await`. Includes safe autofix for simple bodies by inserting explicit await.
 - **`ai-guard/no-redundant-await`** (Off in `recommended`, Error in `strict`)
   Disallow redundant `return await` outside try/catch/finally. AI tools often emit this pattern even when returning the Promise directly is equivalent.
 
 ### 🛡️ Security
 
 - **`ai-guard/no-hardcoded-secret`** (Error)
-  Disallow hardcoded keys/passwords. AI tools frequently provide examples with placeholder secrets that accidentally make it into production.
+  Disallow hardcoded keys/passwords. Includes safe autofix that rewrites values to `process.env.*`.
 - **`ai-guard/no-eval-dynamic`** (Error)
   Disallow dynamic `eval()` or `new Function()`.
 - **`ai-guard/no-sql-string-concat`** (Warn in `recommended`, Error in `security`/`strict`)
-  Disallow variable concatenation/interpolation in SQL queries. AI tools frequently generate dangerous code enabling SQL injection.
+  Disallow variable concatenation/interpolation in SQL queries. Now context-aware for known query builders (Knex, Drizzle, Prisma, Kysely, Sequelize, TypeORM, Mikro-ORM) to reduce false positives while staying strict for non-builder sinks.
 - **`ai-guard/no-unsafe-deserialize`** (Warn in `recommended`/`security`, Error in `strict`)
   Disallow `JSON.parse()` on likely untrusted inputs (like `req.body`) without visible validation.
 - **`ai-guard/require-auth-middleware`** (Warn)
