@@ -60,13 +60,15 @@ export const noHardcodedSecret = createRule({
         if (!node.init) return;
         if (!node.id || node.id.type !== AST_NODE_TYPES.Identifier) return;
 
+        const initNode = node.init;
+
         const varName = node.id.name;
 
         // Check if variable name suggests a secret
         if (!SECRET_NAME_PATTERN.test(varName)) return;
 
         // Only flag string literals and template literals with no expressions
-        const value = getStringValue(node.init);
+        const value = getStringValue(initNode);
         if (value === null) return;
 
         // Skip obviously fake/placeholder values
@@ -74,10 +76,10 @@ export const noHardcodedSecret = createRule({
         if (value.length < 8) return;
 
         // Skip process.env references (already using env vars)
-        if (isProcessEnvAccess(node.init)) return;
+        if (isProcessEnvAccess(initNode)) return;
 
         context.report({
-          node: node.init,
+          node: initNode,
           messageId: 'hardcodedSecret',
           data: {
             name: varName,
@@ -85,7 +87,7 @@ export const noHardcodedSecret = createRule({
           },
           fix: (fixer) =>
             fixer.replaceText(
-              node.init,
+              initNode,
               getProcessEnvAccessText(toEnvVarName(varName))
             ),
         });
@@ -124,7 +126,6 @@ export const noHardcodedSecret = createRule({
       Property(node) {
         if (node.key.type !== AST_NODE_TYPES.Identifier) return;
         if (isRuleMetaMessagesProperty(node)) return;
-        if (node.value.type === AST_NODE_TYPES.SpreadElement) return;
 
         const propName = node.key.name;
         if (!SECRET_NAME_PATTERN.test(propName)) return;
