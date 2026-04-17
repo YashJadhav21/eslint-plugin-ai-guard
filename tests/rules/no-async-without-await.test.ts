@@ -98,11 +98,19 @@ ruleTester.run('no-async-without-await', noAsyncWithoutAwait, {
           return 1;
         }
       `,
+      output: `
+        async function run() {
+          return await (1);
+        }
+      `,
       errors: [{ messageId: 'asyncWithoutAwait' }],
     },
     {
       code: `
         const run = async () => 1;
+      `,
+      output: `
+        const run = async () => await (1);
       `,
       errors: [{ messageId: 'asyncWithoutAwait' }],
     },
@@ -112,12 +120,22 @@ ruleTester.run('no-async-without-await', noAsyncWithoutAwait, {
           return doWork();
         };
       `,
+      output: `
+        const run = async () => {
+          return await (doWork());
+        };
+      `,
       errors: [{ messageId: 'asyncWithoutAwait' }],
     },
     {
       code: `
         async function run() {
           doWork();
+        }
+      `,
+      output: `
+        async function run() {
+          await (doWork());
         }
       `,
       errors: [{ messageId: 'asyncWithoutAwait' }],
@@ -129,6 +147,7 @@ ruleTester.run('no-async-without-await', noAsyncWithoutAwait, {
           return x;
         };
       `,
+      output: null,
       errors: [{ messageId: 'asyncWithoutAwait' }],
     },
     {
@@ -136,6 +155,13 @@ ruleTester.run('no-async-without-await', noAsyncWithoutAwait, {
         class S {
           async run() {
             return this.load();
+          }
+        }
+      `,
+      output: `
+        class S {
+          async run() {
+            return await (this.load());
           }
         }
       `,
@@ -150,6 +176,7 @@ ruleTester.run('no-async-without-await', noAsyncWithoutAwait, {
           return b();
         }
       `,
+      output: null,
       errors: [{ messageId: 'asyncWithoutAwait' }],
     },
     {
@@ -159,18 +186,25 @@ ruleTester.run('no-async-without-await', noAsyncWithoutAwait, {
           return inner;
         };
       `,
+      output: null,
       errors: [{ messageId: 'asyncWithoutAwait' }],
     },
     {
       code: `
         async function empty() {}
       `,
+      output: null,
       errors: [{ messageId: 'asyncWithoutAwait' }],
     },
     {
       code: `
         const fn = async () => {
           Promise.resolve(1);
+        };
+      `,
+      output: `
+        const fn = async () => {
+          await (Promise.resolve(1));
         };
       `,
       errors: [{ messageId: 'asyncWithoutAwait' }],

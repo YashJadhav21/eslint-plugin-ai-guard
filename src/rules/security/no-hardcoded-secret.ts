@@ -43,9 +43,9 @@ export const noHardcodedSecret = createRule({
     type: 'problem',
     docs: {
       description:
-        'Disallow hardcoded secrets, API keys, passwords, and tokens in source code. AI tools frequently generate placeholder credentials that get committed to version control, creating security vulnerabilities.',
+        'Disallow hardcoded secrets, API keys, passwords, and tokens in source code. AI tools frequently generate placeholder credentials that get committed to version control, creating security vulnerabilities. Includes a safe autofix that replaces literals with process.env lookups.',
     },
-    fixable: undefined,
+    fixable: 'code',
     schema: [],
     messages: {
       hardcodedSecret:
@@ -83,6 +83,11 @@ export const noHardcodedSecret = createRule({
             name: varName,
             envName: toEnvVarName(varName),
           },
+          fix: (fixer) =>
+            fixer.replaceText(
+              node.init,
+              getProcessEnvAccessText(toEnvVarName(varName))
+            ),
         });
       },
 
@@ -107,6 +112,11 @@ export const noHardcodedSecret = createRule({
             name: propName,
             envName: toEnvVarName(propName),
           },
+          fix: (fixer) =>
+            fixer.replaceText(
+              node.right,
+              getProcessEnvAccessText(toEnvVarName(propName))
+            ),
         });
       },
 
@@ -114,23 +124,30 @@ export const noHardcodedSecret = createRule({
       Property(node) {
         if (node.key.type !== AST_NODE_TYPES.Identifier) return;
         if (isRuleMetaMessagesProperty(node)) return;
+        if (node.value.type === AST_NODE_TYPES.SpreadElement) return;
 
         const propName = node.key.name;
         if (!SECRET_NAME_PATTERN.test(propName)) return;
 
-        const value = getStringValue(node.value as TSESTree.Expression);
+        const valueNode = node.value as TSESTree.Expression;
+        const value = getStringValue(valueNode);
         if (value === null) return;
         if (FALSE_POSITIVE_VALUES.has(value)) return;
         if (value.length < 8) return;
-        if (isProcessEnvAccess(node.value as TSESTree.Expression)) return;
+        if (isProcessEnvAccess(valueNode)) return;
 
         context.report({
-          node: node.value,
+          node: valueNode,
           messageId: 'hardcodedSecret',
           data: {
             name: propName,
             envName: toEnvVarName(propName),
           },
+          fix: (fixer) =>
+            fixer.replaceText(
+              valueNode,
+              getProcessEnvAccessText(toEnvVarName(propName))
+            ),
         });
       },
     };
@@ -184,6 +201,14 @@ function toEnvVarName(name: string): string {
     .replace(/([a-z])([A-Z])/g, '$1_$2')
     .replace(/[-\s]/g, '_')
     .toUpperCase();
+}
+
+function getProcessEnvAccessText(envName: string): string {
+  if (/^[A-Z_$][A-Z0-9_$]*$/.test(envName)) {
+    return `process.env.${envName}`;
+  }
+
+  return `process.env['${envName.replace(/'/g, "\\'")}']`;
 }
 
 export default noHardcodedSecret;

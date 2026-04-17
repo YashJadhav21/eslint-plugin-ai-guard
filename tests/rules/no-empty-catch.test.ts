@@ -124,6 +124,10 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         try { doSomething(); }
         catch (e) {}
       `,
+      output: `
+        try { doSomething(); }
+        catch (e) { /* TODO: handle error */ }
+      `,
       errors: [
         {
           messageId: 'emptyCatch',
@@ -145,6 +149,10 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         try { doSomething(); }
         catch {}
       `,
+      output: `
+        try { doSomething(); }
+        catch { /* TODO: handle error */ }
+      `,
       errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 3. Empty catch in async function
@@ -153,6 +161,12 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         async function foo() {
           try { await bar(); }
           catch (e) {}
+        }
+      `,
+      output: `
+        async function foo() {
+          try { await bar(); }
+          catch (e) { /* TODO: handle error */ }
         }
       `,
       errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
@@ -165,6 +179,12 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
           catch (e) {}
         };
       `,
+      output: `
+        const foo = () => {
+          try { bar(); }
+          catch (e) { /* TODO: handle error */ }
+        };
+      `,
       errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 5. Nested try with inner empty catch
@@ -173,6 +193,13 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         try {
           try { a(); }
           catch (inner) {}
+        }
+        catch (outer) { log(outer); }
+      `,
+      output: `
+        try {
+          try { a(); }
+          catch (inner) { /* TODO: handle error */ }
         }
         catch (outer) { log(outer); }
       `,
@@ -187,6 +214,13 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
         }
         catch (outer) {}
       `,
+      output: `
+        try {
+          try { a(); }
+          catch (inner) { log(inner); }
+        }
+        catch (outer) { /* TODO: handle error */ }
+      `,
       errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 7. Empty catch in class method
@@ -199,6 +233,14 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
           }
         }
       `,
+      output: `
+        class Service {
+          run() {
+            try { this.execute(); }
+            catch (e) { /* TODO: handle error */ }
+          }
+        }
+      `,
       errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 8. Empty catch with finally
@@ -206,6 +248,11 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
       code: `
         try { doSomething(); }
         catch (e) {}
+        finally { cleanup(); }
+      `,
+      output: `
+        try { doSomething(); }
+        catch (e) { /* TODO: handle error */ }
         finally { cleanup(); }
       `,
       errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
@@ -218,6 +265,12 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
           catch (e) {}
         }
       `,
+      output: `
+        for (const item of items) {
+          try { process(item); }
+          catch (e) { /* TODO: handle error */ }
+        }
+      `,
       errors: [{ messageId: 'emptyCatch', suggestions: 1 }],
     },
     // 10. Multiple empty catches
@@ -225,6 +278,10 @@ ruleTester.run('no-empty-catch', noEmptyCatch, {
       code: `
         try { a(); } catch (e1) {}
         try { b(); } catch (e2) {}
+      `,
+      output: `
+        try { a(); } catch (e1) { /* TODO: handle error */ }
+        try { b(); } catch (e2) { /* TODO: handle error */ }
       `,
       errors: [
         { messageId: 'emptyCatch', suggestions: 1 },

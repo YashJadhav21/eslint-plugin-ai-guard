@@ -131,7 +131,7 @@ ruleTester.run('no-await-in-loop', noAwaitInLoop, {
       `,
       output: `
         async function processAll(items) {
-          const results = await Promise.all(items.map(async (item) => await processItem(item)));
+          await Promise.all(items.map(async (item) => await processItem(item)));
         }
       `,
       errors: [{ messageId: 'awaitInLoop' }],
@@ -144,6 +144,7 @@ ruleTester.run('no-await-in-loop', noAwaitInLoop, {
           }
         }
       `,
+      output: null,
       errors: [{ messageId: 'awaitInLoop' }],
     },
     {
@@ -154,6 +155,7 @@ ruleTester.run('no-await-in-loop', noAwaitInLoop, {
           }
         }
       `,
+      output: null,
       errors: [{ messageId: 'awaitInLoop' }],
     },
     {
@@ -166,6 +168,7 @@ ruleTester.run('no-await-in-loop', noAwaitInLoop, {
           }
         }
       `,
+      output: null,
       errors: [{ messageId: 'awaitInLoop' }],
     },
     {
@@ -178,7 +181,7 @@ ruleTester.run('no-await-in-loop', noAwaitInLoop, {
       `,
       output: `
         async function loadPages(pages) {
-          const results = await Promise.all(pages.map(async (page) => await fetch(page.url)));
+          await Promise.all(pages.map(async (page) => await fetch(page.url)));
         }
       `,
       errors: [{ messageId: 'awaitInLoop' }],

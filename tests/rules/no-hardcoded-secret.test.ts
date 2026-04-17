@@ -76,21 +76,25 @@ ruleTester.run('no-hardcoded-secret', noHardcodedSecret, {
     // 1. Hardcoded API key
     {
       code: `const apiKey = 'sk-1234567890abcdef1234567890abcdef';`,
+      output: `const apiKey = process.env.API_KEY;`,
       errors: [{ messageId: 'hardcodedSecret' }],
     },
     // 2. Hardcoded password
     {
       code: `const password = 'SuperSecretPassword123!';`,
+      output: `const password = process.env.PASSWORD;`,
       errors: [{ messageId: 'hardcodedSecret' }],
     },
     // 3. Hardcoded JWT secret
     {
       code: `const jwtSecret = 'my-super-secret-jwt-key-that-is-long';`,
+      output: `const jwtSecret = process.env.JWT_SECRET;`,
       errors: [{ messageId: 'hardcodedSecret' }],
     },
     // 4. Hardcoded auth token
     {
       code: `const authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';`,
+      output: `const authToken = process.env.AUTH_TOKEN;`,
       errors: [{ messageId: 'hardcodedSecret' }],
     },
     // 5. Object property with hardcoded secret
@@ -100,6 +104,11 @@ ruleTester.run('no-hardcoded-secret', noHardcodedSecret, {
           clientSecret: 'abcdef1234567890abcdef1234567890',
         };
       `,
+      output: `
+        const config = {
+          clientSecret: process.env.CLIENT_SECRET,
+        };
+      `,
       errors: [{ messageId: 'hardcodedSecret' }],
     },
     // 6. Assignment to member with secret value
@@ -107,26 +116,33 @@ ruleTester.run('no-hardcoded-secret', noHardcodedSecret, {
       code: `
         config.apiKey = 'hardcoded-api-key-value-long';
       `,
+      output: `
+        config.apiKey = process.env.API_KEY;
+      `,
       errors: [{ messageId: 'hardcodedSecret' }],
     },
     // 7. Template literal as secret value
     {
       code: 'const secret = `this-is-a-hardcoded-secret-value`;',
+      output: 'const secret = process.env.SECRET;',
       errors: [{ messageId: 'hardcodedSecret' }],
     },
     // 8. Private key
     {
       code: `const privateKey = 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASC';`,
+      output: `const privateKey = process.env.PRIVATE_KEY;`,
       errors: [{ messageId: 'hardcodedSecret' }],
     },
     // 9. Encryption key
     {
       code: `const encryptionKey = 'aes-256-cbc-key-value-here-12345';`,
+      output: `const encryptionKey = process.env.ENCRYPTION_KEY;`,
       errors: [{ messageId: 'hardcodedSecret' }],
     },
     // 10. Access token
     {
       code: `const accessToken = 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';`,
+      output: `const accessToken = process.env.ACCESS_TOKEN;`,
       errors: [{ messageId: 'hardcodedSecret' }],
     },
   ],

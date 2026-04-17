@@ -321,9 +321,9 @@ export const noFloatingPromise = createRule({
     type: 'problem',
     docs: {
       description:
-        'Disallow calling an async function or Promise-returning function without awaiting or handling the result. AI tools frequently generate floating promises where errors disappear silently.',
+        'Disallow calling an async function or Promise-returning function without awaiting or handling the result. AI tools frequently generate floating promises where errors disappear silently. Includes a safe autofix that marks intentional fire-and-forget calls with void.',
     },
-    fixable: undefined,
+    fixable: 'code',
     schema: [],
     messages: {
       floatingPromise:
@@ -343,6 +343,11 @@ export const noFloatingPromise = createRule({
           context.report({
             node,
             messageId: 'floatingPromise',
+            fix: (fixer) =>
+              fixer.replaceText(
+                node.expression,
+                `void ${context.sourceCode.getText(node.expression)}`
+              ),
           });
           return;
         }
@@ -374,6 +379,11 @@ export const noFloatingPromise = createRule({
           context.report({
             node,
             messageId: 'floatingPromise',
+            fix: (fixer) =>
+              fixer.replaceText(
+                node.expression,
+                `void ${context.sourceCode.getText(node.expression)}`
+              ),
           });
         }
       },

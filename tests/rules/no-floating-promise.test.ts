@@ -135,16 +135,19 @@ ruleTester.run('no-floating-promise', noFloatingPromise, {
     // 1. Bare fetch() call as statement
     {
       code: `fetch('/api/users');`,
+      output: `void fetch('/api/users');`,
       errors: [{ messageId: 'floatingPromise' }],
     },
     // 2. Bare Promise.resolve() call
     {
       code: `Promise.resolve(1);`,
+      output: `void Promise.resolve(1);`,
       errors: [{ messageId: 'floatingPromise' }],
     },
     // 3. Bare Promise.all() call
     {
       code: `Promise.all(tasks);`,
+      output: `void Promise.all(tasks);`,
       errors: [{ messageId: 'floatingPromise' }],
     },
     // 4. Known async function declared in same file
@@ -152,6 +155,10 @@ ruleTester.run('no-floating-promise', noFloatingPromise, {
       code: `
         async function doWork() { return 1; }
         doWork();
+      `,
+      output: `
+        async function doWork() { return 1; }
+        void doWork();
       `,
       errors: [{ messageId: 'floatingPromise' }],
     },
@@ -161,22 +168,34 @@ ruleTester.run('no-floating-promise', noFloatingPromise, {
         const processItems = async () => { return 1; };
         processItems();
       `,
+      output: `
+        const processItems = async () => { return 1; };
+        void processItems();
+      `,
       errors: [{ messageId: 'floatingPromise' }],
     },
     // 6. Async IIFE not awaited/handled
     {
       code: `(async () => 1)();`,
+      output: `void (async () => 1)();`,
       errors: [{ messageId: 'floatingPromise' }],
     },
     // 7. New Promise without handling
     {
       code: `new Promise((resolve) => resolve(1));`,
+      output: `void new Promise((resolve) => resolve(1));`,
       errors: [{ messageId: 'floatingPromise' }],
     },
     // 8. Async function declared later should still be detected
     {
       code: `
         loadData();
+        async function loadData() {
+          await fetch('/api');
+        }
+      `,
+      output: `
+        void loadData();
         async function loadData() {
           await fetch('/api');
         }
@@ -190,6 +209,12 @@ ruleTester.run('no-floating-promise', noFloatingPromise, {
           await fetch('/api/slots');
         };
         fetchDentistSlots();
+      `,
+      output: `
+        const fetchDentistSlots = async () => {
+          await fetch('/api/slots');
+        };
+        void fetchDentistSlots();
       `,
       errors: [{ messageId: 'floatingPromise' }],
     },

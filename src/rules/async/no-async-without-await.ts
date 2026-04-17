@@ -1,5 +1,5 @@
 import { ESLintUtils, AST_NODE_TYPES } from '@typescript-eslint/utils';
-import type { TSESTree } from '@typescript-eslint/utils';
+import type { TSESTree, TSESLint } from '@typescript-eslint/utils';
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/YashJadhav21/eslint-plugin-ai-guard/blob/main/docs/rules/${name}.md`
@@ -56,9 +56,9 @@ export const noAsyncWithoutAwait = createRule({
     type: 'suggestion',
     docs: {
       description:
-        'Disallow async functions that never use await. AI tools frequently add async by default, creating misleading signatures and unnecessary Promise wrappers.',
+        'Disallow async functions that never use await. AI tools frequently add async by default, creating misleading signatures and unnecessary Promise wrappers. Includes a safe autofix for simple function bodies.',
     },
-    fixable: undefined,
+    fixable: 'code',
     schema: [],
     messages: {
       asyncWithoutAwait:
@@ -67,6 +67,44 @@ export const noAsyncWithoutAwait = createRule({
   },
   defaultOptions: [],
   create(context) {
+    function buildSafeAutofix(
+      node:
+        | TSESTree.FunctionDeclaration
+        | TSESTree.FunctionExpression
+        | TSESTree.ArrowFunctionExpression,
+    ): ((fixer: TSESLint.RuleFixer) => TSESLint.RuleFix | null) | undefined {
+      const sourceCode = context.sourceCode;
+
+      if (node.body.type !== AST_NODE_TYPES.BlockStatement) {
+        const exprText = sourceCode.getText(node.body);
+        return (fixer) => fixer.replaceText(node.body, `await (${exprText})`);
+      }
+
+      if (node.body.body.length !== 1) {
+        return undefined;
+      }
+
+      const onlyStatement = node.body.body[0];
+
+      if (
+        onlyStatement.type === AST_NODE_TYPES.ReturnStatement &&
+        onlyStatement.argument &&
+        onlyStatement.argument.type !== AST_NODE_TYPES.AwaitExpression
+      ) {
+        const returnValueText = sourceCode.getText(onlyStatement.argument);
+        return (fixer) =>
+          fixer.replaceText(onlyStatement.argument as TSESTree.Node, `await (${returnValueText})`);
+      }
+
+      if (onlyStatement.type === AST_NODE_TYPES.ExpressionStatement) {
+        const exprText = sourceCode.getText(onlyStatement.expression);
+        return (fixer) =>
+          fixer.replaceText(onlyStatement.expression as TSESTree.Node, `await (${exprText})`);
+      }
+
+      return undefined;
+    }
+
     function reportIfNeeded(
       node:
         | TSESTree.FunctionDeclaration
@@ -80,18 +118,22 @@ export const noAsyncWithoutAwait = createRule({
       // Async arrow with expression body cannot contain await unless the body itself is AwaitExpression.
       if (node.body.type !== AST_NODE_TYPES.BlockStatement) {
         if (node.body.type !== AST_NODE_TYPES.AwaitExpression) {
+          const fix = buildSafeAutofix(node);
           context.report({
             node,
             messageId: 'asyncWithoutAwait',
+            fix,
           });
         }
         return;
       }
 
       if (!containsAwaitExpression(node.body)) {
+        const fix = buildSafeAutofix(node);
         context.report({
           node,
           messageId: 'asyncWithoutAwait',
+          fix,
         });
       }
     }

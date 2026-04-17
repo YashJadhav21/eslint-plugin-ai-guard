@@ -503,7 +503,7 @@ function buildSafeAutofix(
   const iterableText = sourceCode.getText(loopNode.right);
   const awaitedCallText = sourceCode.getText(onlyStatement.expression.argument);
 
-  return `const results = await Promise.all(${iterableText}.map(async (${paramName}) => await ${awaitedCallText}));`;
+  return `await Promise.all(${iterableText}.map(async (${paramName}) => await ${awaitedCallText}));`;
 }
 
 export const noAwaitInLoop = createRule({
@@ -512,7 +512,7 @@ export const noAwaitInLoop = createRule({
     type: 'suggestion',
     docs: {
       description:
-        'Disallow independent `await` usage inside loops, while allowing intentional retry/fallback/sequential workflows. AI tools frequently generate accidental sequential awaits where Promise.all would be safer and faster.',
+        'Disallow independent `await` usage inside loops, while allowing intentional retry/fallback/sequential workflows. AI tools frequently generate accidental sequential awaits where Promise.all would be safer and faster. Includes a safe autofix for simple independent loops.',
     },
     fixable: 'code',
     schema: [],
