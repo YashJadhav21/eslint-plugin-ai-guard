@@ -103,5 +103,29 @@ ruleTester.run('no-eval-dynamic', noEvalDynamic, {
       `,
       errors: [{ messageId: 'evalDynamic' }],
     },
+    // 11. Regression: `Function(...)` called WITHOUT `new` is semantically
+    //     identical to `new Function(...)` per ECMA-262 / MDN — both produce
+    //     an executable function from a code string. The rule previously
+    //     only hooked NewExpression, letting bare-call code injection pass.
+    {
+      code: `
+        const userCode = getInput();
+        const fn = Function('input', userCode);
+      `,
+      errors: [{ messageId: 'newFunctionDynamic' }],
+    },
+    // 12. Regression: bare-call with a concat argument.
+    {
+      code: `const fn = Function('x', 'return x + ' + suffix);`,
+      errors: [{ messageId: 'newFunctionDynamic' }],
+    },
+    // 13. Regression: globalThis.Function(...) without new.
+    {
+      code: `
+        const payload = getPayload();
+        globalThis.Function('return ' + payload)();
+      `,
+      errors: [{ messageId: 'newFunctionDynamic' }],
+    },
   ],
 });

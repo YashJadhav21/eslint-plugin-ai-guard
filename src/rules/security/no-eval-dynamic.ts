@@ -62,15 +62,31 @@ export const noEvalDynamic = createRule({
             messageId: 'evalDynamic',
             data: { callee: `${node.callee.object.name}.eval()` },
           });
+          return;
+        }
+
+        // Function(...) invoked WITHOUT `new` is semantically identical to
+        // new Function(...) per ECMA-262 and MDN — `Function('a','return a')(1)`
+        // executes the body string as code. AI-generated examples sometimes
+        // drop the `new` because both forms "work"; the rule previously hooked
+        // only NewExpression, letting bare calls through as a code-injection
+        // FN. Cover Identifier `Function(...)` plus `window.Function(...)` /
+        // `globalThis.Function(...)`.
+        if (isFunctionConstructorCallee(node.callee)) {
+          if (node.arguments.length === 0) return;
+          const allLiteral = node.arguments.every(isLiteral);
+          if (allLiteral) return;
+
+          context.report({
+            node,
+            messageId: 'newFunctionDynamic',
+          });
         }
       },
 
       NewExpression(node) {
-        // Check for new Function(...)
-        if (
-          node.callee.type === AST_NODE_TYPES.Identifier &&
-          node.callee.name === 'Function'
-        ) {
+        // Check for new Function(...) / new window.Function(...) / new globalThis.Function(...)
+        if (isFunctionConstructorCallee(node.callee)) {
           if (node.arguments.length === 0) return;
 
           // All arguments must be literals to be safe
@@ -86,6 +102,30 @@ export const noEvalDynamic = createRule({
     };
   },
 });
+
+/**
+ * Match the `Function` constructor callee in any of its reachable forms:
+ * - bare identifier `Function`
+ * - `window.Function`
+ * - `globalThis.Function`
+ * Used for both `new Function(...)` and bare `Function(...)` calls, which are
+ * semantically identical for the code-injection risk the rule targets.
+ */
+function isFunctionConstructorCallee(callee: TSESTree.Node): boolean {
+  if (callee.type === AST_NODE_TYPES.Identifier && callee.name === 'Function') {
+    return true;
+  }
+  if (
+    callee.type === AST_NODE_TYPES.MemberExpression &&
+    callee.property.type === AST_NODE_TYPES.Identifier &&
+    callee.property.name === 'Function' &&
+    callee.object.type === AST_NODE_TYPES.Identifier &&
+    (callee.object.name === 'window' || callee.object.name === 'globalThis')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 /**
  * Check if a node is a static literal (string, number, boolean, null, template literal with no expressions).
